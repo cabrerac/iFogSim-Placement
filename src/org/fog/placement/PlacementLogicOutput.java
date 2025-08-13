@@ -20,16 +20,25 @@ public class PlacementLogicOutput {
     Map<Integer, Map<Application, List<ModuleLaunchConfig>>> perDevice = new HashMap<>();
 
     Map<Integer, List<Pair<String, Integer>>> serviceDiscoveryInfo = new HashMap<>();
+    Map<Integer, List<SPPHeuristic.PRContextAwareEntry>> serviceDiscoveryInfoV2 = new HashMap<>();
 
     //Integer indicates next device to send the placement request (-1 for finished, or device id for others )
-    Map<PlacementRequest,Integer> prStatus = new HashMap<>();
+    Map<PlacementRequest, Integer> prStatus = new HashMap<>();
 
-    public PlacementLogicOutput(Map<Integer, Map<Application, List<ModuleLaunchConfig>>> perDevice, Map<Integer, List<Pair<String, Integer>>> serviceDiscoveryInfo, Map<PlacementRequest,Integer> prStatus) {
+
+    public PlacementLogicOutput(Map<Integer, Map<Application, List<ModuleLaunchConfig>>> perDevice, Map<Integer, List<Pair<String, Integer>>> serviceDiscoveryInfo, Map<PlacementRequest, Integer> prStatus) {
         this.perDevice = perDevice;
         this.serviceDiscoveryInfo = serviceDiscoveryInfo;
         this.prStatus = prStatus;
     }
 
+    public PlacementLogicOutput(Map<Integer, Map<Application, List<ModuleLaunchConfig>>> perDevice, Map<PlacementRequest, Integer> prStatus) {
+        // For inheritance only
+        this.perDevice = perDevice;
+        this.prStatus = prStatus;
+    }
+
+    // Simon (020425) says deprecated
     public Map<Integer, List<Pair<String, Integer>>> getServiceDiscoveryInfo() {
         return serviceDiscoveryInfo;
     }
@@ -38,7 +47,12 @@ public class PlacementLogicOutput {
         return perDevice;
     }
 
-    public Map<PlacementRequest,Integer> getPrStatus() {
+    public Map<PlacementRequest, Integer> getPrStatus() {
         return prStatus;
     }
+
+    public Map<Integer, List<SPPHeuristic.PRContextAwareEntry>> getServiceDiscoveryInfoV2() {
+        return serviceDiscoveryInfoV2;
+    }
+
 }

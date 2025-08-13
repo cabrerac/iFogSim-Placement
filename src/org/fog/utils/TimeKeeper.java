@@ -32,9 +32,17 @@ public class TimeKeeper {
 	private Map<Integer, Double> tupleIdToExecutionTime = new HashMap<>();
 	
 	public static TimeKeeper getInstance(){
-		if(instance == null)
+		if(instance == null) {
 			instance = new TimeKeeper();
+			// Initialize the count to 0 explicitly when creating a new instance
+			instance.count = 0;
+		}
 		return instance;
+	}
+
+	// This is part of the state that should be reset between simulations
+	public static void deleteInstance() {
+		instance = null;
 	}
 	
 	public int getUniqueId(){

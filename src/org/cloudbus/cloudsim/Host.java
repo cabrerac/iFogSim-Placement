@@ -14,6 +14,7 @@ import org.cloudbus.cloudsim.core.CloudSim;
 import org.cloudbus.cloudsim.lists.PeList;
 import org.cloudbus.cloudsim.provisioners.BwProvisioner;
 import org.cloudbus.cloudsim.provisioners.RamProvisioner;
+import org.fog.utils.Logger;
 
 /**
  * Host executes actions related to management of virtual machines (e.g., creation and destruction).
@@ -219,6 +220,15 @@ public class Host {
 			return false;
 		}
 
+		if (vm.getCurrentRequestedMips().size() != 1){
+			Logger.error("Simon-cloudsim incompatibility error",
+					String.format("Current requested mips of VM has length %d instead of 1", vm.getCurrentRequestedMips().size()));
+		}
+		if (vm.getCurrentRequestedMips().get(0) != vm.getMips()){
+			Logger.error("Simon-cloudsim incompatibility error",
+					"Current requested mips does not align with vm.mips()");
+		}
+
 		if (!getVmScheduler().allocatePesForVm(vm, vm.getCurrentRequestedMips())) {
 			Log.printLine("[VmScheduler.vmCreate] Allocation of VM #" + vm.getId() + " to Host #" + getId()
 					+ " failed by MIPS");
@@ -322,10 +332,10 @@ public class Host {
 
 	/**
 	 * Gets the total mips.
-	 * 
+	 *
 	 * @return the total mips
 	 */
-	public int getTotalMips() {
+	public double getTotalMips() {
 		return PeList.getTotalMips(getPeList());
 	}
 
@@ -406,7 +416,7 @@ public class Host {
 
 	/**
 	 * Gets the machine memory.
-	 * 
+	 *
 	 * @return the machine memory
 	 * @pre $none
 	 * @post $result > 0
@@ -417,7 +427,7 @@ public class Host {
 
 	/**
 	 * Gets the machine storage.
-	 * 
+	 *
 	 * @return the machine storage
 	 * @pre $none
 	 * @post $result >= 0

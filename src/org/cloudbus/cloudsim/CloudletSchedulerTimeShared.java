@@ -251,6 +251,12 @@ public class CloudletSchedulerTimeShared extends CloudletScheduler {
 		rcl.setCloudletStatus(Cloudlet.SUCCESS);
 		rcl.finalizeCloudlet();
 		getCloudletFinishedList().add(rcl);
+
+		if (rcl.getCloudlet() == null || !(rcl.getCloudlet() instanceof Tuple)) {
+			throw new IllegalArgumentException("Cloudlet is null or not an instance of Tuple");
+		}
+		Tuple t = (Tuple) rcl.getCloudlet();
+		Tuple newt = new Tuple(t);
 	}
 
 	/**
@@ -394,6 +400,11 @@ public class CloudletSchedulerTimeShared extends CloudletScheduler {
 		return null;
 	}
 
+	public int getFinishedCloudletCount() {
+		return getCloudletFinishedList().size();
+	}
+
+
 	/**
 	 * Returns the number of cloudlets runnning in the virtual machine.
 	 * 
@@ -430,6 +441,10 @@ public class CloudletSchedulerTimeShared extends CloudletScheduler {
 	protected <T extends ResCloudlet> List<T> getCloudletExecList() {
 		return (List<T>) cloudletExecList;
 	}
+
+//	public int getCloudletExecListSize() {
+//		return cloudletExecList.size();
+//	}
 
 	/**
 	 * Sets the cloudlet exec list.
@@ -489,7 +504,13 @@ public class CloudletSchedulerTimeShared extends CloudletScheduler {
 	 */
 	@Override
 	public List<Double> getCurrentRequestedMips() {
+		// Necessary for overbooking in the installation of modules.
+		// Allocates Pes for a VM, we pass in this argument which ensures that the allocation always happens.
+		// Actual allocation of Pes (+ updating of VMScheduler.mipsMap) will happen upon Tuple execution
 		List<Double> mipsShare = new ArrayList<Double>();
+//		for (ResCloudlet c : cloudletExecList) {
+//			mipsShare.add(c.);
+//		}
 		return mipsShare;
 	}
 

@@ -90,17 +90,17 @@ public class ClusteredMicroservicePlacementLogic implements MicroservicePlacemen
         for (PlacementRequest placementRequest : placementRequests) {
             List<String> toRemove = new ArrayList<>();
             //placement should include newly placed ones
-            for (String microservice : mappedMicroservices.get(placementRequest.getPlacementRequestId()).keySet()) {
-                if (placementRequest.getPlacedMicroservices().containsKey(microservice))
+            for (String microservice : mappedMicroservices.get(placementRequest.getSensorId()).keySet()) {
+                if (placementRequest.getPlacedServices().containsKey(microservice))
                     toRemove.add(microservice);
                 else
-                    placementRequest.getPlacedMicroservices().put(microservice, mappedMicroservices.get(placementRequest.getPlacementRequestId()).get(microservice));
+                    placementRequest.getPlacedServices().put(microservice, mappedMicroservices.get(placementRequest.getSensorId()).get(microservice));
             }
             for (String microservice : toRemove)
-                mappedMicroservices.get(placementRequest.getPlacementRequestId()).remove(microservice);
+                mappedMicroservices.get(placementRequest.getSensorId()).remove(microservice);
 
             //update placed modules in placement request as well
-            placement.put(placementRequest.getPlacementRequestId(), mappedMicroservices.get(placementRequest.getPlacementRequestId()));
+            placement.put(placementRequest.getSensorId(), mappedMicroservices.get(placementRequest.getSensorId()));
         }
 
         //todo it assumed that modules are not shared among applications.
@@ -113,7 +113,7 @@ public class ClusteredMicroservicePlacementLogic implements MicroservicePlacemen
                 //retrieve application
                 PlacementRequest placementRequest = null;
                 for (PlacementRequest pr : placementRequests) {
-                    if (pr.getPlacementRequestId() == prID)
+                    if (pr.getSensorId() == prID)
                         placementRequest = pr;
                 }
                 Application application = applicationInfo.get(placementRequest.getApplicationId());
@@ -121,7 +121,7 @@ public class ClusteredMicroservicePlacementLogic implements MicroservicePlacemen
                     int deviceID = placement.get(prID).get(microserviceName);
 
                     //service discovery info propagation
-                    List<Integer> clientDevices = getClientServiceNodeIds(application, microserviceName, placementRequest.getPlacedMicroservices(), placement.get(prID));
+                    List<Integer> clientDevices = getClientServiceNodeIds(application, microserviceName, placementRequest.getPlacedServices(), placement.get(prID));
                     for (int clientDevice : clientDevices) {
                         if (serviceDiscoveryInfo.containsKey(clientDevice))
                             serviceDiscoveryInfo.get(clientDevice).add(new Pair<>(microserviceName, deviceID));
@@ -212,10 +212,10 @@ public class ClusteredMicroservicePlacementLogic implements MicroservicePlacemen
         Map<PlacementRequest, Integer> deviceToPlace = new HashMap<>();
         //initiate with the  parent of the client device for this
         for (PlacementRequest placementRequest : placementRequests) {
-            deviceToPlace.put(placementRequest, getDevice(placementRequest.getGatewayDeviceId()).getParentId());
+            deviceToPlace.put(placementRequest, getDevice(placementRequest.getRequester()).getParentId());
 
             // already placed modules
-            mappedMicroservices.put(placementRequest.getPlacementRequestId(), new HashMap<>(placementRequest.getPlacedMicroservices()));
+            mappedMicroservices.put(placementRequest.getSensorId(), new HashMap<>(placementRequest.getPlacedServices()));
 
             //special modules  - predefined cloud placements
             Application app =  applicationInfo.get(placementRequest.getApplicationId());
@@ -234,7 +234,7 @@ public class ClusteredMicroservicePlacementLogic implements MicroservicePlacemen
                         if (!currentModuleMap.get(deviceId).contains(microservice))
                             currentModuleMap.get(deviceId).add(microservice);
 
-                        mappedMicroservices.get(placementRequest.getPlacementRequestId()).put(microservice, deviceId);
+                        mappedMicroservices.get(placementRequest.getSensorId()).put(microservice, deviceId);
 
                         //currentModuleLoad
                         if (!currentModuleLoadMap.get(deviceId).containsKey(microservice))
@@ -268,7 +268,7 @@ public class ClusteredMicroservicePlacementLogic implements MicroservicePlacemen
                     // NOTE: Every PR (primary key placementRequestId) has its own set of placed modules (stored in mappedMicroservices).
                     // Meaning each module in all PRs has a separate set of dependent modules, which are from the same PR
                     // As argument we pass the list of set modules FOR THAT PR that have been placed. But in the function we are iterating through ALL modules in the app
-                    List<String> modulesToPlace = getModulesToPlace(mappedMicroservices.get(placementRequest.getPlacementRequestId()).keySet(), app);
+                    List<String> modulesToPlace = getModulesToPlace(mappedMicroservices.get(placementRequest.getSensorId()).keySet(), app);
                     if (modulesToPlace.isEmpty())
                         placementCompleteCount++;
                     else
@@ -295,7 +295,7 @@ public class ClusteredMicroservicePlacementLogic implements MicroservicePlacemen
                                 if (!currentModuleMap.get(deviceId).contains(microservice))
                                     currentModuleMap.get(deviceId).add(microservice);
 
-                                mappedMicroservices.get(placementRequest.getPlacementRequestId()).put(microservice, deviceId);
+                                mappedMicroservices.get(placementRequest.getSensorId()).put(microservice, deviceId);
 
                                 //currentModuleLoad
                                 if (!currentModuleLoadMap.get(deviceId).containsKey(microservice))
@@ -393,7 +393,7 @@ public class ClusteredMicroservicePlacementLogic implements MicroservicePlacemen
                                     if (!currentModuleMap.get(id).contains(microservice))
                                         currentModuleMap.get(id).add(microservice);
 
-                                    mappedMicroservices.get(placementRequest.getPlacementRequestId()).put(microservice, id);
+                                    mappedMicroservices.get(placementRequest.getSensorId()).put(microservice, id);
 
                                     moduleToApp.put(microservice, app.getAppId());
 

@@ -64,6 +64,15 @@ public class CloudSim {
 
 	/** The minimal time between events. Events within shorter periods after the last event are discarded. */
 	private static double minTimeBetweenEvents = 0.1;
+
+	private static int FogBrokerId;
+
+	public static int getFogBrokerId(){
+		return FogBrokerId;
+	}
+	public static void setFogBrokerId(int id){
+		FogBrokerId = id;
+	}
 	
 	/**
 	 * Initialises all the common attributes.
@@ -222,6 +231,14 @@ public class CloudSim {
 					+ "Error - can't stop Cloud Simulation.");
 		}
 	}
+
+	// We only empty the queues, CloudSim will reset its (static) state
+	// init should be called again later (in main sim file)
+	public static void clearQueues() {
+		CloudSim.future = new FutureQueue();
+		CloudSim.deferred = new DeferredQueue();
+	}
+
 
 	/**
 	 * This method is called if one wants to terminate the simulation.
@@ -561,6 +578,7 @@ public class CloudSim {
 	 */
 	public static void runStop() {
 		printMessage("Simulation completed.");
+		System.out.println("Simulation completed.");
 	}
 
 	/**
@@ -912,7 +930,7 @@ public class CloudSim {
 		double clock = clock();
 
 		finishSimulation();
-		runStop();
+//		runStop();
 
 		return clock;
 	}

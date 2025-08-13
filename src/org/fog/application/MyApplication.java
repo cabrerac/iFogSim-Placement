@@ -26,7 +26,10 @@ public class MyApplication extends Application {
 	
 	public void addAppModule(String moduleName,int ram, int mips, long size, long bw){
 		String vmm = "Xen";
+		// Debug: Print current entity ID before VM creation
+		System.out.println("Creating AppModule '" + moduleName + "', ENTITY_ID before: " + FogUtils.getCurrentEntityId());
 		AppModule module = new AppModule(FogUtils.generateEntityId(), moduleName, appId, userId, mips, ram, bw, size, vmm, new TupleScheduler(mips, 1), new HashMap<Pair<String, String>, SelectivityModel>());
+		System.out.println("Created AppModule with ID: " + module.getId());
 		getModules().add(module); 
 	}
 	
@@ -37,13 +40,5 @@ public class MyApplication extends Application {
 	public void setAdditionalMipsInfo(Map<Integer, Map<String, Integer>> additionalMipsInfo) {
 		this.additionalMipsInfo = additionalMipsInfo;
 	}
-	
-//	public void setDeadlineInfo(Map<Integer, Map<String, Double>> deadlineInfo) {
-//		this.deadlineInfo = deadlineInfo;
-//	}
-	
-//	public Map<Integer, Map<String, Double>> getDeadlineInfo() {
-//		return deadlineInfo;
-//	}
 	
 }

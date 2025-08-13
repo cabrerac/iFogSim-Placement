@@ -10,6 +10,7 @@ import org.fog.application.AppEdge;
 import org.fog.application.AppModule;
 import org.fog.application.Application;
 import org.fog.placement.MicroservicePlacementLogic;
+import org.fog.placement.SPPHeuristic;
 import org.fog.placement.PlacementLogicOutput;
 import org.fog.utils.*;
 import org.json.simple.JSONObject;
@@ -312,7 +313,7 @@ public class MicroserviceFogDevice extends FogDevice {
 
     protected void processPlacementRequests() {
         if (MicroservicePlacementConfig.PR_PROCESSING_MODE == MicroservicePlacementConfig.PERIODIC && placementRequests.size() == 0) {
-            send(getId(), MicroservicePlacementConfig.PLACEMENT_INTERVAL, FogEvents.PROCESS_PRS);
+            send(getId(), MicroservicePlacementConfig.PLACEMENT_PROCESS_INTERVAL, FogEvents.PROCESS_PRS);
             return;
         }
         long startTime = System.nanoTime();
@@ -332,7 +333,7 @@ public class MicroserviceFogDevice extends FogDevice {
         System.out.println("Placement Algorithm Completed. Time : " + (endTime - startTime) / 1e6);
 
         Map<Integer, Map<Application, List<ModuleLaunchConfig>>> perDevice = placementLogicOutput.getPerDevice();
-        Map<Integer, List<Pair<String, Integer>>> serviceDicovery = placementLogicOutput.getServiceDiscoveryInfo();
+        Map<Integer, List<SPPHeuristic.PRContextAwareEntry>> serviceDiscoveryInfo = placementLogicOutput.getServiceDiscoveryInfoV2();
         Map<PlacementRequest, Integer> placementRequestStatus = placementLogicOutput.getPrStatus();
 
         int fogDeviceCount = 0;
@@ -359,13 +360,13 @@ public class MicroserviceFogDevice extends FogDevice {
             }
             if (MicroservicePlacementConfig.SIMULATION_MODE == "DYNAMIC") {
                 //todo
-                transmitModulesToDeply(deviceID, perDevice.get(deviceID));
+                transmitModulesToDeploy(deviceID, perDevice.get(deviceID));
             }
             placementString.append("\n");
         }
         System.out.println(placementString.toString());
-        for (int clientDevice : serviceDicovery.keySet()) {
-            for (Pair serviceData : serviceDicovery.get(clientDevice)) {
+        for (int clientDevice : serviceDiscoveryInfo.keySet()) {
+            for (SPPHeuristic.PRContextAwareEntry serviceData : serviceDiscoveryInfo.get(clientDevice)) {
                 if (MicroservicePlacementConfig.SIMULATION_MODE == "DYNAMIC") {
                     transmitServiceDiscoveryData(clientDevice, serviceData);
                 } else if (MicroservicePlacementConfig.SIMULATION_MODE == "STATIC") {
@@ -389,7 +390,7 @@ public class MicroserviceFogDevice extends FogDevice {
         }
 
         if (MicroservicePlacementConfig.PR_PROCESSING_MODE == MicroservicePlacementConfig.PERIODIC)
-            send(getId(), MicroservicePlacementConfig.PLACEMENT_INTERVAL, FogEvents.PROCESS_PRS);
+            send(getId(), MicroservicePlacementConfig.PLACEMENT_PROCESS_INTERVAL, FogEvents.PROCESS_PRS);
         else if (MicroservicePlacementConfig.PR_PROCESSING_MODE == MicroservicePlacementConfig.SEQUENTIAL && !this.placementRequests.isEmpty())
             sendNow(getId(), FogEvents.PROCESS_PRS);
     }
@@ -425,6 +426,9 @@ public class MicroserviceFogDevice extends FogDevice {
         JSONObject object = (JSONObject) ev.getData();
         Pair<String, Integer> placement = (Pair<String, Integer>) object.get("service data");
         String action = (String) object.get("action");
+        
+        // WARNING: Using deprecated service discovery mechanism - this should eventually be 
+        // replaced with PR-aware service discovery that includes sensorId and prIndex
         if (action.equals("ADD"))
             this.controllerComponent.addServiceDiscoveryInfo(placement.getFirst(), placement.getSecond());
         else if (action.equals("REMOVE"))
@@ -520,20 +524,20 @@ public class MicroserviceFogDevice extends FogDevice {
 
     private void transmitPR(PlacementRequest placementRequest, Integer deviceId) {
         ManagementTuple prTuple = new ManagementTuple(placementRequest.getApplicationId(), FogUtils.generateTupleId(), ManagementTuple.NONE, ManagementTuple.PLACEMENT_REQUEST);
-        prTuple.setData(placementRequest);
+        prTuple.setPlacementRequest(placementRequest);
         prTuple.setDestinationDeviceId(deviceId);
         sendNow(getId(), FogEvents.MANAGEMENT_TUPLE_ARRIVAL, prTuple);
     }
 
-    private void transmitServiceDiscoveryData(int clientDevice, Pair serviceData) {
+    private void transmitServiceDiscoveryData(int clientDevice, SPPHeuristic.PRContextAwareEntry serviceData) {
         ManagementTuple sdTuple = new ManagementTuple(FogUtils.generateTupleId(), ManagementTuple.NONE, ManagementTuple.SERVICE_DISCOVERY_INFO);
-        sdTuple.setServiceDiscoveryInfor(serviceData);
+        sdTuple.setServiceDiscoveryInfo(serviceData);
         sdTuple.setDestinationDeviceId(clientDevice);
         sendNow(getId(), FogEvents.MANAGEMENT_TUPLE_ARRIVAL, sdTuple);
     }
 
-    private void transmitModulesToDeply(int deviceID, Map<Application, List<ModuleLaunchConfig>> applicationListMap) {
-        ManagementTuple moduleTuple = new ManagementTuple(FogUtils.generateTupleId(), ManagementTuple.NONE, ManagementTuple.DEPLOYMENTREQUEST);
+    private void transmitModulesToDeploy(int deviceID, Map<Application, List<ModuleLaunchConfig>> applicationListMap) {
+        ManagementTuple moduleTuple = new ManagementTuple(FogUtils.generateTupleId(), ManagementTuple.NONE, ManagementTuple.DEPLOYMENT_REQUEST);
         moduleTuple.setDeployementSet(applicationListMap);
         moduleTuple.setDestinationDeviceId(deviceID);
         sendNow(getId(), FogEvents.MANAGEMENT_TUPLE_ARRIVAL, moduleTuple);
@@ -546,10 +550,10 @@ public class MicroserviceFogDevice extends FogDevice {
                 sendNow(getId(), FogEvents.RECEIVE_PR, tuple.getPlacementRequest());
             } else if (tuple.managementTupleType == ManagementTuple.SERVICE_DISCOVERY_INFO) {
                 JSONObject serviceDiscoveryAdd = new JSONObject();
-                serviceDiscoveryAdd.put("service data", tuple.getServiceDiscoveryInfor());
+                serviceDiscoveryAdd.put("service data", tuple.getServiceDiscoveryInfo());
                 serviceDiscoveryAdd.put("action", "ADD");
                 sendNow(getId(), FogEvents.UPDATE_SERVICE_DISCOVERY, serviceDiscoveryAdd);
-            } else if (tuple.managementTupleType == ManagementTuple.DEPLOYMENTREQUEST) {
+            } else if (tuple.managementTupleType == ManagementTuple.DEPLOYMENT_REQUEST) {
                 deployModules(tuple.getDeployementSet());
             } else if (tuple.managementTupleType == ManagementTuple.RESOURCE_UPDATE) {
                 sendNow(getId(), FogEvents.UPDATE_RESOURCE_INFO, tuple.getResourceData());

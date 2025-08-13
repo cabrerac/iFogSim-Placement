@@ -22,6 +22,10 @@ public class Tuple extends Cloudlet{
 	private int actuatorId;
 	private int sourceDeviceId;
 	private int sourceModuleId;
+
+	// For unique service discovery entry
+	private Integer prIndex;
+	private Integer sensorId;
 	/**
 	 * Map to keep track of which module instances has a tuple traversed.
 	 * 
@@ -51,6 +55,28 @@ public class Tuple extends Cloudlet{
 		setModuleCopyMap(new HashMap<String, Integer>());
 		setDestinationDeviceId(-1);
 	}
+
+	public Tuple(Tuple other) {
+		super(other.getCloudletId(), other.getCloudletLength(), other.getNumberOfPes(),
+				other.getCloudletFileSize(), other.getCloudletOutputSize(),
+				other.getUtilizationModelCpu(), other.getUtilizationModelRam(), other.getUtilizationModelBw());
+
+		this.appId = other.getAppId();
+		this.tupleType = other.getTupleType();
+		this.destModuleName = other.getDestModuleName();
+		this.srcModuleName = other.getSrcModuleName();
+		this.actualTupleId = other.getActualTupleId();
+		this.direction = other.getDirection();
+		this.actuatorId = other.getActuatorId();
+		this.sourceDeviceId = other.getSourceDeviceId();
+		this.sourceModuleId = other.getSourceModuleId();
+		this.destinationDeviceId = other.getDestinationDeviceId();
+
+		// Deep copy for mutable fields
+		this.moduleCopyMap = new HashMap<>(other.getModuleCopyMap());
+		this.traversedMicroservices = new HashMap<>(other.getTraversed());
+	}
+
 
 	public int getActualTupleId() {
 		return actualTupleId;
@@ -145,11 +171,7 @@ public class Tuple extends Cloudlet{
 	}
 
 	public int getDeviceForMicroservice(String microserviceName) {
-		if (!traversedMicroservices.containsKey(microserviceName))
-			return -1;
-		else {
-			return traversedMicroservices.get(microserviceName);
-		}
+        return traversedMicroservices.getOrDefault(microserviceName, -1);
 	}
 
 	public Map<String, Integer> getTraversed() {
@@ -158,6 +180,22 @@ public class Tuple extends Cloudlet{
 
 	public void setTraversedMicroservices(Map<String, Integer> traversed) {
 		traversedMicroservices = traversed;
+	}
+
+	public Integer getPrIndex() {
+		return prIndex;
+	}
+
+	public void setPrIndex(Integer prIndex) {
+		this.prIndex = prIndex;
+	}
+
+	public Integer getSensorId() {
+		return sensorId;
+	}
+
+	public void setSensorId(Integer sensorId) {
+		this.sensorId = sensorId;
 	}
 
 }

@@ -143,7 +143,7 @@ public class MicroservicesController extends SimEntity {
             shareResourceDataAmongClusterNodes();
         }
 
-        send(getId(), Config.RESOURCE_MANAGE_INTERVAL, FogEvents.CONTROLLER_RESOURCE_MANAGE);
+        send(getId(), Config.CONTROLLER_RESOURCE_MANAGE_INTERVAL, FogEvents.CONTROLLER_RESOURCE_MANAGE);
 
         send(getId(), Config.MAX_SIMULATION_TIME, FogEvents.STOP_SIMULATION);
     }
@@ -163,9 +163,9 @@ public class MicroservicesController extends SimEntity {
         for (PlacementRequest p : placementRequestDelayMap.keySet()) {
             processPlacedModules(p);
             if (placementRequestDelayMap.get(p) == 0) {
-                sendNow(p.getGatewayDeviceId(), FogEvents.TRANSMIT_PR, p);
+                sendNow(p.getRequester(), FogEvents.TRANSMIT_PR, p);
             } else
-                send(p.getGatewayDeviceId(), placementRequestDelayMap.get(p), FogEvents.TRANSMIT_PR, p);
+                send(p.getRequester(), placementRequestDelayMap.get(p), FogEvents.TRANSMIT_PR, p);
         }
         if (MicroservicePlacementConfig.PR_PROCESSING_MODE == MicroservicePlacementConfig.PERIODIC) {
             for (FogDevice f : fogDevices) {
@@ -179,7 +179,7 @@ public class MicroservicesController extends SimEntity {
     protected void initiatePlacementRequestProcessing() {
         for (PlacementRequest p : placementRequestDelayMap.keySet()) {
             processPlacedModules(p);
-            int fonId = ((MicroserviceFogDevice) getFogDeviceById(p.getGatewayDeviceId())).getFonId();
+            int fonId = ((MicroserviceFogDevice) getFogDeviceById(p.getRequester())).getFonId();
             if (placementRequestDelayMap.get(p) == 0) {
                 sendNow(fonId, FogEvents.RECEIVE_PR, p);
             } else
@@ -195,8 +195,8 @@ public class MicroservicesController extends SimEntity {
     }
 
     protected void processPlacedModules(PlacementRequest p) {
-        for (String placed : p.getPlacedMicroservices().keySet()) {
-            int deviceId = p.getPlacedMicroservices().get(placed);
+        for (String placed : p.getPlacedServices().keySet()) {
+            int deviceId = p.getPlacedServices().get(placed);
             Application application = applications.get(p.getApplicationId());
             sendNow(deviceId, FogEvents.ACTIVE_APP_UPDATE, application);
             sendNow(deviceId, FogEvents.APP_SUBMIT, application);
@@ -228,7 +228,7 @@ public class MicroservicesController extends SimEntity {
     // todo Simon says this might be the part where edge server (gateway device connected to sensor) forwards the PR to cloud!!! (or in the case of this simulation, its FON head)
     private void transmitPr(SimEvent ev) {
         PlacementRequest placementRequest = (PlacementRequest) ev.getData();
-        int fonId = ((MicroserviceFogDevice) getFogDeviceById(placementRequest.getGatewayDeviceId())).getFonId();
+        int fonId = ((MicroserviceFogDevice) getFogDeviceById(placementRequest.getRequester())).getFonId();
         sendNow(fonId, FogEvents.RECEIVE_PR, placementRequest);
     }
 
@@ -258,7 +258,7 @@ public class MicroservicesController extends SimEntity {
 
     protected void manageResources() {
         // todo Simon says this does nothing, doesnt it???
-        send(getId(), Config.RESOURCE_MANAGE_INTERVAL, FogEvents.CONTROLLER_RESOURCE_MANAGE);
+        send(getId(), Config.CONTROLLER_RESOURCE_MANAGE_INTERVAL, FogEvents.CONTROLLER_RESOURCE_MANAGE);
     }
 
     protected void printNetworkUsageDetails() {

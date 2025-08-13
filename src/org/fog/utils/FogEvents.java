@@ -26,7 +26,7 @@ public class FogEvents {
     public static final int SEND_PERIODIC_TUPLE = BASE + 22;
     public static final int LAUNCH_MODULE_INSTANCE = BASE + 23;
     public static final int RESOURCE_MGMT = BASE + 24;
-    public static final int INITIALIZE_SENSOR = BASE + 24;
+//    public static final int INITIALIZE_SENSOR = BASE + 24;
     public static final int EMIT_TUPLE = BASE + 25;
     //-----------------------------------------
     public static final int MOBILITY_SUBMIT = BASE + 26;
@@ -45,5 +45,22 @@ public class FogEvents {
     public static final int UPDATE_RESOURCE_INFO = BASE + 37;
     //---------------------------------------------
     public static final int START_DYNAMIC_CLUSTERING = BASE + 38;
-
+    // Simon --------------------------------------
+    public static final int MODULE_UNINSTALL = BASE + 39;
+    public static final int NODE_EXECUTION_FINISHED = BASE + 40;
+    public static final int EXECUTION_START_REQUEST = BASE + 41;
+    // FogBroker ----------------------------------
+    public static final int RECEIVE_PLACEMENT_DECISION = BASE + 50;
+    public static final int RECEIVE_INSTALL_NOTIF = BASE + 51;
+    public static final int EXECUTION_TIMEOUT = BASE + 52;
+    // MyMicroserviceController--------------------
+    public static final int GENERATE_PERIODIC_PR = BASE + 53;
+    public static final int USER_RESOURCE_UPDATE = BASE + 54;
+    // Mobility Management ------------------------
+    public static final int SCHEDULER_NEXT_MOVEMENT_UPDATE = BASE + 55;
+    public static final int MAKE_PATH = BASE + 56;
+    // Scenario Events ----------------------------
+    public static final int OPERA_ACCIDENT_EVENT = BASE + 57;
+    // PR Generation Device-specific ------------
+    public static final int GENERATE_PR_FOR_DEVICE = BASE + 58;
 }

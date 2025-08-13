@@ -11,7 +11,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
 
-
+// This is deprecated for OfflinePoC, OnlinePoC, SPPExperiment, MobilityPoC
 public class DataParser {
     public Map<String, Location> resourceLocationData = new HashMap<String, Location>();
     public Map<String, Integer> levelID = new HashMap<String, Integer>();
@@ -40,7 +40,6 @@ public class DataParser {
     }
 
     private double nextMobilisationEvent(double eventTime, int mobilityPattern) {
-        // TODO Simon says maybe we can configure different users with this. This will ultimately be called in main function
         Random ran = new Random();
         int seed;
         double newEventTime = -1;
@@ -92,17 +91,14 @@ public class DataParser {
 
     }
 
-    @SuppressWarnings("unchecked")
-    public void parseResourceData() throws NumberFormatException, IOException {
-
-
+    public void parseResourceData(String filename) throws NumberFormatException, IOException {
         int numOfLevels = levelID.get("LevelsNum");
         ArrayList<String>[] resouresOnLevels = new ArrayList[numOfLevels];
         for (int i = 0; i < numOfLevels; i++)
             resouresOnLevels[i] = new ArrayList<String>();
 
 
-        BufferedReader csvReader = new BufferedReader(new FileReader("./dataset/edgeResources-melbCBD.csv"));
+        BufferedReader csvReader = new BufferedReader(new FileReader(filename));
         String row;
         while ((row = csvReader.readLine()) != null) {
             String[] data = row.split(",");
@@ -120,5 +116,9 @@ public class DataParser {
             levelwiseResources.put(i, resouresOnLevels[i]);
         }
         csvReader.close();
+    }
+
+    public void parseResourceData() throws NumberFormatException, IOException {
+        parseResourceData("./dataset/edgeResources-melbCBD.csv");
     }
 }

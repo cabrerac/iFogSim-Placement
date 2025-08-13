@@ -90,6 +90,7 @@ public class FogDevice extends PowerDatacenter {
     protected double clusterLinkBandwidth;
 
 
+    // UplinkLatency must be in seconds. We convert to milliseconds in this constructor.
     public FogDevice(
             String name,
             FogDeviceCharacteristics characteristics,
@@ -106,7 +107,9 @@ public class FogDevice extends PowerDatacenter {
         setSchedulingInterval(schedulingInterval);
         setUplinkBandwidth(uplinkBandwidth);
         setDownlinkBandwidth(downlinkBandwidth);
-        setUplinkLatency(uplinkLatency);
+        // Simon says we convert to milliseconds in constructor call.
+        // If already -1, don't touch.
+        if (uplinkLatency>-1) setUplinkLatency(uplinkLatency * Consts.MILLISECOND);
         setRatePerMips(ratePerMips);
         setAssociatedActuatorIds(new ArrayList<Pair<Integer, Double>>());
         for (Host host : getCharacteristics().getHostList()) {
@@ -195,7 +198,7 @@ public class FogDevice extends PowerDatacenter {
         setVmList(new ArrayList<Vm>());
         setUplinkBandwidth(uplinkBandwidth);
         setDownlinkBandwidth(downlinkBandwidth);
-        setUplinkLatency(uplinkLatency);
+        uplinkLatency = -1;
         setAssociatedActuatorIds(new ArrayList<Pair<Integer, Double>>());
         for (Host host1 : getCharacteristics().getHostList()) {
             host1.setDatacenter(this);
@@ -356,7 +359,7 @@ public class FogDevice extends PowerDatacenter {
         System.out.println(getName() + " Creating " + config.getInstanceCount() + " instances of module " + config.getModule().getName());
     }
 
-    private AppModule getModuleByName(String moduleName) {
+    protected AppModule getModuleByName(String moduleName) {
         AppModule module = null;
         for (Vm vm : getHost().getVmList()) {
             if (((AppModule) vm).getName().equals(moduleName)) {
@@ -419,7 +422,7 @@ public class FogDevice extends PowerDatacenter {
      *
      * @return the double
      */
-    protected double updateCloudetProcessingWithoutSchedulingFutureEventsForce() {
+    protected double updateCloudletProcessingWithoutSchedulingFutureEventsForce() {
         double currentTime = CloudSim.clock();
         double minTime = Double.MAX_VALUE;
         double timeDiff = currentTime - getLastProcessTime();
@@ -433,18 +436,18 @@ public class FogDevice extends PowerDatacenter {
                 minTime = time;
             }
 
-            Log.formatLine(
-                    "%.2f: [Host #%d] utilization is %.2f%%",
-                    currentTime,
-                    host.getId(),
-                    host.getUtilizationOfCpu() * 100);
+//            Log.formatLine(
+//                    "%.2f: [Host #%d] utilization is %.2f%%",
+//                    currentTime,
+//                    host.getId(),
+//                    host.getUtilizationOfCpu() * 100);
         }
 
         if (timeDiff > 0) {
-            Log.formatLine(
-                    "\nEnergy consumption for the last time frame from %.2f to %.2f:",
-                    getLastProcessTime(),
-                    currentTime);
+//            Log.formatLine(
+//                    "\nEnergy consumption for the last time frame from %.2f to %.2f:",
+//                    getLastProcessTime(),
+//                    currentTime);
 
             for (PowerHost host : this.<PowerHost>getHostList()) {
                 double previousUtilizationOfCpu = host.getPreviousUtilizationOfCpu();
@@ -455,30 +458,30 @@ public class FogDevice extends PowerDatacenter {
                         timeDiff);
                 timeFrameDatacenterEnergy += timeFrameHostEnergy;
 
-                Log.printLine();
-                Log.formatLine(
-                        "%.2f: [Host #%d] utilization at %.2f was %.2f%%, now is %.2f%%",
-                        currentTime,
-                        host.getId(),
-                        getLastProcessTime(),
-                        previousUtilizationOfCpu * 100,
-                        utilizationOfCpu * 100);
-                Log.formatLine(
-                        "%.2f: [Host #%d] energy is %.2f W*sec",
-                        currentTime,
-                        host.getId(),
-                        timeFrameHostEnergy);
+//                Log.printLine();
+//                Log.formatLine(
+//                        "%.2f: [Host #%d] utilization at %.2f was %.2f%%, now is %.2f%%",
+//                        currentTime,
+//                        host.getId(),
+//                        getLastProcessTime(),
+//                        previousUtilizationOfCpu * 100,
+//                        utilizationOfCpu * 100);
+//                Log.formatLine(
+//                        "%.2f: [Host #%d] energy is %.2f W*sec",
+//                        currentTime,
+//                        host.getId(),
+//                        timeFrameHostEnergy);
             }
 
-            Log.formatLine(
-                    "\n%.2f: Data center's energy is %.2f W*sec\n",
-                    currentTime,
-                    timeFrameDatacenterEnergy);
+//            Log.formatLine(
+//                    "\n%.2f: Data center's energy is %.2f W*sec\n",
+//                    currentTime,
+//                    timeFrameDatacenterEnergy);
         }
 
         setPower(getPower() + timeFrameDatacenterEnergy);
 
-        checkCloudletCompletion();
+        checkCloudletCompletion(); // This function call is where mips are dynamically reallocated from finished Modules
 
         /** Remove completed VMs **/
         /**
@@ -502,6 +505,7 @@ public class FogDevice extends PowerDatacenter {
     protected void checkCloudletCompletion() {
         boolean cloudletCompleted = false;
         List<? extends Host> list = getVmAllocationPolicy().getHostList();
+
         for (int i = 0; i < list.size(); i++) {
             Host host = list.get(i);
             for (Vm vm : host.getVmList()) {
@@ -568,6 +572,10 @@ public class FogDevice extends PowerDatacenter {
         return -1;
     }
 
+    // This only works WITH OVERBOOKING
+    //  I will override this. It is used in:
+    //  - executeTuple
+    //  - checkCloudletCompletion
     protected void updateAllocatedMips(String incomingOperator) {
         getHost().getVmScheduler().deallocatePesForAllVms();
         for (final Vm vm : getHost().getVmList()) {
@@ -594,7 +602,7 @@ public class FogDevice extends PowerDatacenter {
 
     }
 
-    private void updateEnergyConsumption() {
+    protected void updateEnergyConsumption() {
         double totalMipsAllocated = 0;
         for (final Vm vm : getHost().getVmList()) {
             AppModule operator = (AppModule) vm;
@@ -622,13 +630,17 @@ public class FogDevice extends PowerDatacenter {
         setTotalCost(newcost);
 
         lastUtilization = Math.min(1, totalMipsAllocated / getHost().getTotalMips());
-        if (lastUtilization > 0) {
-            System.out.println("------------------------");
-            System.out.println("Device ID: " + getId());
-            System.out.println("Utilization = " + lastUtilization);
-            System.out.println("Power = " + getHost().getPowerModel().getPower(lastUtilization));
-            System.out.println("Time passed: " + (timeNow - lastUtilizationUpdateTime));
-        }
+//        if (lastUtilization > 0) {
+//            System.out.println("------------------------");
+//            System.out.println("Device ID: " + getId());
+//            System.out.println("Device Name: " + getName());
+//            System.out.println("Utilization = " + lastUtilization);
+//            System.out.println("Power = " + getHost().getPowerModel().getPower(lastUtilization));
+//            System.out.println("Time passed: " + (timeNow - lastUtilizationUpdateTime));
+//            for (Map.Entry<String, List<Double>> entry : getHost().getVmScheduler().getMipsMap().entrySet()) {
+//                System.out.println("Key: " + entry.getKey() + ", Value: " + entry.getValue());
+//            }
+//        }
         lastUtilizationUpdateTime = timeNow;
     }
 
@@ -797,6 +809,8 @@ public class FogDevice extends PowerDatacenter {
         send(ev.getSource(), CloudSim.getMinTimeBetweenEvents(), FogEvents.TUPLE_ACK);
     }
 
+    // This calls updateAllocatedMips which only works WITH OVERBOOKING
+    //  I will overwrite this.
     protected void executeTuple(SimEvent ev, String moduleName) {
         Logger.debug(getName(), "Executing tuple on module " + moduleName);
         Tuple tuple = (Tuple) ev.getData();
@@ -894,7 +908,14 @@ public class FogDevice extends PowerDatacenter {
     protected void updateSouthTupleQueue() {
         if (!getSouthTupleQueue().isEmpty()) {
             Pair<Tuple, Integer> pair = getSouthTupleQueue().poll();
-            sendDownFreeLink(pair.getFirst(), pair.getSecond());
+            Integer childId = pair.getSecond();
+            if (getChildToLatencyMap().containsKey(childId)) {
+                sendDownFreeLink(pair.getFirst(), childId);
+            } else {
+                System.out.println("Warning: Tuple for device " + childId + 
+                         " discarded as device is no longer a child of " + getName());
+                updateSouthTupleQueue();
+            }
         } else {
             setSouthLinkBusy(false);
         }
@@ -958,6 +979,7 @@ public class FogDevice extends PowerDatacenter {
         return uplinkLatency;
     }
 
+    // in MILLISECONDS
     public void setUplinkLatency(double uplinkLatency) {
         this.uplinkLatency = uplinkLatency;
     }
@@ -1191,6 +1213,11 @@ public class FogDevice extends PowerDatacenter {
 
     public Queue<Pair<Tuple, Integer>> getClusterTupleQueue() {
         return clusterTupleQueue;
+    }
+
+    @Override
+    public void shutdownEntity(){
+        this.setState(FINISHED);
     }
 
 

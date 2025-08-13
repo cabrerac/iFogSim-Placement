@@ -23,7 +23,7 @@ public class OfflineDataParser extends DataParser {
 
     @Override
     public void parseUserData(Map<Integer, Integer> userMobilityPattern, String fileName) throws IOException {
-        // TODO Simon says all users are IMMOBILE. The file to parse is very much like the resources file
+        // All users are IMMOBILE. The file to parse is very much like the resources file
 
         BufferedReader csvReader = new BufferedReader(new FileReader(fileName));
         System.out.println("The positions of immobile users is extracted from: " + fileName);
@@ -50,7 +50,7 @@ public class OfflineDataParser extends DataParser {
     }
 
     @Override
-    public void parseResourceData() throws NumberFormatException, IOException {
+    public void parseResourceData(String filename) throws NumberFormatException, IOException {
 
         int numOfLevels = levelID.get("LevelsNum");
         ArrayList<String>[] resouresOnLevels = new ArrayList[numOfLevels];
@@ -58,7 +58,7 @@ public class OfflineDataParser extends DataParser {
             resouresOnLevels[i] = new ArrayList<String>();
 
 
-        BufferedReader csvReader = new BufferedReader(new FileReader("./dataset/edgeResources-melbCBD_OfflinePOC.csv"));
+        BufferedReader csvReader = new BufferedReader(new FileReader(filename));
         String row;
         while ((row = csvReader.readLine()) != null) {
             String[] data = row.split(",");
@@ -76,5 +76,10 @@ public class OfflineDataParser extends DataParser {
             levelwiseResources.put(i, resouresOnLevels[i]);
         }
         csvReader.close();
+    }
+
+    @Override
+    public void parseResourceData() throws NumberFormatException, IOException {
+        parseResourceData("./dataset/edgeResources-melbCBD_OfflinePOC.csv");
     }
 }

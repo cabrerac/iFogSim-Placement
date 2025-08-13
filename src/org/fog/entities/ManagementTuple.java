@@ -3,6 +3,7 @@ package org.fog.entities;
 import org.apache.commons.math3.util.Pair;
 import org.cloudbus.cloudsim.UtilizationModelFull;
 import org.fog.application.Application;
+import org.fog.placement.SPPHeuristic;
 import org.fog.utils.ModuleLaunchConfig;
 
 import java.util.List;
@@ -19,13 +20,30 @@ public class ManagementTuple extends Tuple {
     public static final int PLACEMENT_REQUEST = 1;
     public static final int SERVICE_DISCOVERY_INFO = 2;
     public static final int RESOURCE_UPDATE = 3;
-    public static final int DEPLOYMENTREQUEST = 4;
+    public static final int DEPLOYMENT_REQUEST = 4;
+    public static final int INSTALL_NOTIFICATION = 5;
+    public static final int TUPLE_FORWARDING = 6;
 
     public int managementTupleType;
     protected PlacementRequest placementRequest;
-    protected Pair<String, Integer> serviceDiscoveryInfor;
+    protected SPPHeuristic.PRContextAwareEntry serviceDiscoveryInfo;
     protected Map<Application, List<ModuleLaunchConfig>> deployementSet;
     protected Pair<Integer, Map<String, Double>> resourceData;
+    protected Tuple startingTuple;
+
+    // Note (sensorID, prIndex) fields serve different purposes in managementTuples and Tuples.
+    //  Tuples use them to PASS information to other FogDevices for service discovery.
+    //  In ManagementTuples they are the PAYLOADS to update service discovery entries with.
+
+    public Integer getCycleNumber() {
+        return cycleNumber;
+    }
+
+    public void setCycleNumber(Integer cycleNumber) {
+        this.cycleNumber = cycleNumber;
+    }
+
+    protected Integer cycleNumber;
 
     //todo check use of this
     public Double processingDelay = 0.0;
@@ -41,7 +59,7 @@ public class ManagementTuple extends Tuple {
         managementTupleType = tupleType;
     }
 
-    public void setData(PlacementRequest placementRequest) {
+    public void setPlacementRequest(PlacementRequest placementRequest) {
         this.placementRequest = placementRequest;
     }
 
@@ -49,12 +67,12 @@ public class ManagementTuple extends Tuple {
         return placementRequest;
     }
 
-    public void setServiceDiscoveryInfor(Pair<String, Integer> serviceDiscoveryInfor) {
-        this.serviceDiscoveryInfor = serviceDiscoveryInfor;
+    public void setServiceDiscoveryInfo(SPPHeuristic.PRContextAwareEntry serviceDiscoveryInfo) {
+        this.serviceDiscoveryInfo = serviceDiscoveryInfo;
     }
 
-    public Pair<String, Integer> getServiceDiscoveryInfor() {
-        return serviceDiscoveryInfor;
+    public SPPHeuristic.PRContextAwareEntry getServiceDiscoveryInfo() {
+        return serviceDiscoveryInfo;
     }
 
     public void setDeployementSet(Map<Application, List<ModuleLaunchConfig>> deployementSet) {
@@ -71,5 +89,13 @@ public class ManagementTuple extends Tuple {
 
     public void setResourceData(Pair<Integer, Map<String, Double>> resourceData) {
         this.resourceData = resourceData;
+    }
+
+    public Tuple getStartingTuple() {
+        return startingTuple;
+    }
+
+    public void setStartingTuple(Tuple startingTuple) {
+        this.startingTuple = startingTuple;
     }
 }

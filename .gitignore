@@ -4,4 +4,7 @@ bin/
 .classpath
 .settings/
 .project
-*.class
+**/*.class
+out
+melbourne.osm.pbf
+target/
