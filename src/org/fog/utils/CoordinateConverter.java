@@ -44,7 +44,7 @@ public class CoordinateConverter {
     /**
      * Initializes coordinate converter from a location config file
      * 
-     * @param configFilePath Path to location_config.json
+     * @param configFilePath Path to location_config_melbourne.json
      * @return true if initialization successful, false otherwise
      */
     public static boolean initializeFromConfig(String configFilePath) {
@@ -85,13 +85,18 @@ public class CoordinateConverter {
             // Read points of interest
             if (config.containsKey("pointsOfInterest")) {
                 JSONObject pois = (JSONObject) config.get("pointsOfInterest");
+                System.out.println("CoordinateConverter loading points of interest from template config:");
                 for (Object key : pois.keySet()) {
                     String name = (String) key;
                     JSONObject poi = (JSONObject) pois.get(name);
                     double lat = ((Number) poi.get("lat")).doubleValue();
                     double lon = ((Number) poi.get("lon")).doubleValue();
                     pointsOfInterest.put(name, new double[]{lat, lon});
+                    System.out.println("  - " + name + ": (" + lat + ", " + lon + ")");
                 }
+            } else {
+                System.out.println("WARNING: Template config does not contain 'pointsOfInterest' section!");
+                System.out.println("  Generated configs will only have a 'center' point.");
             }
             
             initialized = true;
@@ -100,6 +105,7 @@ public class CoordinateConverter {
             System.out.println("  Center: " + CENTER_LAT + ", " + CENTER_LON);
             System.out.println("  Bounds: [" + MIN_LAT + ", " + MIN_LON + "] to [" + MAX_LAT + ", " + MAX_LON + "]");
             System.out.println("  World dimensions: " + WORLD_X + "m x " + WORLD_Y + "m");
+            System.out.println("  Points of interest loaded: " + pointsOfInterest.size());
             
             return true;
         } catch (IOException | ParseException e) {
@@ -284,6 +290,7 @@ public class CoordinateConverter {
             ensureDirectoryExists(filePath);
         }
         
+        int poisWritten = 1; // Count 'center' - declare outside try block
         try (FileWriter writer = new FileWriter(filePath)) {
             writer.write("{\n");
             writer.write("  \"minLat\": " + MIN_LAT + ",\n");
@@ -304,6 +311,7 @@ public class CoordinateConverter {
                 if (!entry.getKey().equals("center")) {
                     writer.write(",\n    \"" + entry.getKey() + "\": {\"lat\": " + 
                               entry.getValue()[0] + ", \"lon\": " + entry.getValue()[1] + "}");
+                    poisWritten++;
                 }
             }
             
@@ -312,6 +320,10 @@ public class CoordinateConverter {
         }
         
         System.out.println("Generated location config at: " + filePath);
+        System.out.println("  Wrote " + poisWritten + " points of interest to generated config");
+        if (poisWritten == 1) {
+            System.out.println("  WARNING: Only 'center' POI was written. Template may be missing HOSPITAL1/OPERA_HOUSE!");
+        }
         return filePath;
     }
 } 

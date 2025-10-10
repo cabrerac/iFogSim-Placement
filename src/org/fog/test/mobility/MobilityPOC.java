@@ -21,11 +21,13 @@ import org.cloudbus.cloudsim.sdn.overbooking.PeProvisionerOverbooking;
 import org.fog.entities.FogDevice;
 import org.fog.entities.FogDeviceCharacteristics;
 import org.fog.entities.SPPFogDevice;
+import org.fog.mobilitydata.Location;
 import org.fog.placement.PlacementSimulationController;
 import org.fog.policy.AppModuleAllocationPolicy;
 import org.fog.utils.FogEvents;
 import org.fog.utils.FogLinearPowerModel;
 import org.fog.utils.FogUtils;
+import org.fog.utils.LocationConfigLoader;
 import org.fog.utils.Logger;
 
 /**
@@ -61,6 +63,32 @@ public class MobilityPOC {
             Log.enable();
             Logger.ENABLED = true;
             CloudSim.init(num_user, calendar, trace_flag);
+            
+            // Load location configuration from JSON before creating any Location objects
+            String locationConfigFile = "./dataset/location_config_melbourne.json";
+            System.out.println("Loading location configuration from " + locationConfigFile);
+            boolean configLoaded = LocationConfigLoader.loadAndApplyConfig(locationConfigFile);
+            if (!configLoaded) {
+                System.err.println("Warning: Failed to load location configuration, using default values from Config.java");
+            }
+            
+            // Make sure Location class is updated with the latest Config values
+            Location.refreshConfigValues();
+            
+            // Verify that required points of interest are loaded
+            System.out.println("Verifying points of interest after config load:");
+            Location hospital = Location.getPointOfInterest("HOSPITAL1");
+            Location operaHouse = Location.getPointOfInterest("OPERA_HOUSE");
+            System.out.println("  HOSPITAL1: " + (hospital != null ? hospital.toString() : "NOT FOUND"));
+            System.out.println("  OPERA_HOUSE: " + (operaHouse != null ? operaHouse.toString() : "NOT FOUND"));
+            
+            // If any required POI is missing, provide helpful error message
+            if (hospital == null || operaHouse == null) {
+                System.err.println("ERROR: Required points of interest not found in location configuration!");
+                System.err.println("Location config file: " + locationConfigFile);
+                System.err.println("Make sure the JSON file contains 'pointsOfInterest' with 'HOSPITAL1' and 'OPERA_HOUSE'");
+                throw new RuntimeException("Missing required points of interest in location configuration");
+            }
             
             // Create the fog devices
             List<FogDevice> fogDevices = createFogDevices();

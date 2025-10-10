@@ -32,8 +32,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 /**
  * Platform to run the OnlinePOC simulation under variable parameters:
@@ -60,16 +58,12 @@ public class SPPExperiment {
 //    private static final String CONFIG_FILE = "./dataset/PerformanceEvalConfigsUsers.yaml";
     private static final String outputFile = "./output/MiH_4_0_Melbourne.csv";
     private static final String CONFIG_FILE = "./dataset/SPPExperimentConfigs.yaml";
-    // Path to location configuration file
-    private static final String LOCATION_CONFIG_FILE = "./dataset/location_config.json";
 
     static List<FogDevice> fogDevices = new ArrayList<FogDevice>();
     static List<Sensor> sensors = new ArrayList<Sensor>();
     static List<Actuator> actuators = new ArrayList<Actuator>();
 
-    // Constants for CSV file paths and data configurations
-    private static final String USERS_LOCATION_PATH = "./dataset/usersLocation-melbCBD_Experiments.csv";
-    private static final String RESOURCES_LOCATION_PATH = "./dataset/edgeResources-melbCBD_Experiments.csv";
+    // Constants for data configurations
     static double SENSOR_TRANSMISSION_TIME = 10;
 
     // Add these constants after the existing constants
@@ -119,10 +113,12 @@ public class SPPExperiment {
      * @throws IOException If file generation fails
      */
     private static void generateLocationFiles(int numberOfEdge, int numberOfUsers, long seed) throws IOException {
-        // First initialize the CoordinateConverter from the existing config file
-        boolean initialized = CoordinateConverter.initializeFromConfig(LOCATION_CONFIG_FILE);
+        // First initialize the CoordinateConverter from the config file specified in constants
+        String locationConfigFile = experimentConstants.getLocationConfigFile();
+        boolean initialized = CoordinateConverter.initializeFromConfig(locationConfigFile);
         if (!initialized) {
-            System.out.println("Warning: Could not initialize from config file. Using default coordinate values.");
+            System.out.println("Warning: Could not initialize from config file: " + locationConfigFile);
+            System.out.println("Using default coordinate values.");
         }
         
         // Define output directory for generated files
@@ -435,19 +431,176 @@ public class SPPExperiment {
         return -1; // Error case
     }
 
+    // Shared constants across all experiments (loaded from YAML)
+    private static SPPExperimentConstants experimentConstants = null;
+
     /**
      * Loads simulation configurations from a YAML file
      *
      * @return List of SimulationConfig objects
      */
+    @SuppressWarnings("unchecked")
     private static List<SimulationConfig> loadConfigurationsFromYaml() {
         List<SimulationConfig> configs = new ArrayList<>();
 
         try (InputStream inputStream = new FileInputStream(SPPExperiment.CONFIG_FILE)) {
-            Yaml yaml = new Yaml();
-            List<Map<String, Object>> yamlConfigs = yaml.load(inputStream);
+            org.yaml.snakeyaml.LoaderOptions loaderOptions = new org.yaml.snakeyaml.LoaderOptions();
+            loaderOptions.setMaxAliasesForCollections(1000);
+            Yaml yaml = new Yaml(loaderOptions);
+            Object yamlData = yaml.load(inputStream);
+            
+            // YAML must be a Map with "constants" and "experiments" sections
+            if (!(yamlData instanceof Map)) {
+                throw new IllegalArgumentException(
+                    "YAML file must contain a 'constants' section and an 'experiments' section. " +
+                    "Legacy format (direct list of experiments) is no longer supported. " +
+                    "See dataset/SPPExperimentConfigs_WithConstants_Example.yaml for the required format.");
+            }
+            
+            Map<String, Object> yamlRoot = (Map<String, Object>) yamlData;
+            
+            // Load constants (REQUIRED)
+            if (!yamlRoot.containsKey("constants")) {
+                throw new IllegalArgumentException(
+                    "YAML file must contain a 'constants' section with required fields: " +
+                    "geographicArea, locationConfigFile, resourcesLocationPath, usersLocationPath. " +
+                    "See dataset/SPPExperimentConfigs_WithConstants_Example.yaml for an example.");
+            }
+            
+            experimentConstants = loadExperimentConstants((Map<String, Object>) yamlRoot.get("constants"));
+            System.out.println("Loaded experiment constants: " + experimentConstants);
+            
+            // Load experiments (REQUIRED)
+            if (!yamlRoot.containsKey("experiments")) {
+                throw new IllegalArgumentException(
+                    "YAML file must contain an 'experiments' section with your experiment configurations.");
+            }
+            
+            List<Map<String, Object>> yamlConfigs = (List<Map<String, Object>>) yamlRoot.get("experiments");
+            configs = parseExperimentConfigs(yamlConfigs);
 
-            for (Map<String, Object> configMap : yamlConfigs) {
+            System.out.println("Loaded " + configs.size() + " configurations from " + SPPExperiment.CONFIG_FILE);
+            
+            // Validate that OSM file exists if any experiments have mobile users
+            validateOsmFileForMobileUsers(configs);
+            
+        } catch (IOException e) {
+            System.err.println("Error loading configurations from " + SPPExperiment.CONFIG_FILE);
+            e.printStackTrace();
+        }
+
+        return configs;
+    }
+    
+    /**
+     * Validates that OSM file exists if any experiments contain mobile users
+     * Mobile users (genericUser, ambulanceUser, operaUser) require GraphHopper, which needs OSM files
+     */
+    private static void validateOsmFileForMobileUsers(List<SimulationConfig> configs) {
+        // Check if any config has mobile users
+        boolean hasMobileUsers = false;
+        for (SimulationConfig config : configs) {
+            Map<String, Integer> usersPerType = config.getUsersPerType();
+            int mobileUserCount = usersPerType.getOrDefault("genericUser", 0) +
+                                 usersPerType.getOrDefault("ambulanceUser", 0) +
+                                 usersPerType.getOrDefault("operaUser", 0);
+            if (mobileUserCount > 0) {
+                hasMobileUsers = true;
+                break;
+            }
+        }
+        
+        if (hasMobileUsers) {
+            String osmPath = experimentConstants.getOsmFilePath();
+            java.io.File osmFile = new java.io.File(osmPath);
+            if (!osmFile.exists()) {
+                System.err.println("================================================================================");
+                System.err.println("ERROR: Your experiments contain mobile users, but OSM file not found!");
+                System.err.println("File: " + osmPath);
+                System.err.println("Mobile users (genericUser, ambulanceUser, operaUser) require GraphHopper routing,");
+                System.err.println("which needs an OpenStreetMap .osm.pbf file for the geographic area.");
+                System.err.println("Either:");
+                System.err.println("  1. Download the OSM file for your area and update osmFilePath in your config");
+                System.err.println("  2. Use only immobileUser if you don't need realistic mobility");
+                System.err.println("================================================================================");
+                throw new IllegalArgumentException("OSM file required for mobile users but not found: " + osmPath);
+            } else {
+                System.out.println("✓ OSM file validated for mobile users: " + osmPath);
+            }
+        } else {
+            System.out.println("✓ No mobile users detected - OSM file not required");
+        }
+    }
+
+    /**
+     * Loads experiment constants from YAML constants section
+     * Validates that all required fields are present
+     */
+    @SuppressWarnings("unchecked")
+    private static SPPExperimentConstants loadExperimentConstants(Map<String, Object> constantsMap) {
+        // Check for always-required fields
+        String[] requiredFields = {"geographicArea", "locationConfigFile"};
+        for (String field : requiredFields) {
+            if (!constantsMap.containsKey(field) || constantsMap.get(field) == null) {
+                throw new IllegalArgumentException(
+                    "Required field '" + field + "' is missing from constants section. " +
+                    "The following are always required: geographicArea, locationConfigFile");
+            }
+        }
+        
+        String locationConfigFile = (String) constantsMap.get("locationConfigFile");
+        String geographicArea = (String) constantsMap.get("geographicArea");
+        
+        // Read useDynamicLocations flag (defaults to false for backwards compatibility)
+        boolean useDynamicLocations = false;
+        if (constantsMap.containsKey("useDynamicLocations")) {
+            useDynamicLocations = (Boolean) constantsMap.get("useDynamicLocations");
+        }
+        
+        // CSV paths are only required if NOT using dynamic locations
+        String resourcesLocationPath = (String) constantsMap.get("resourcesLocationPath");
+        String usersLocationPath = (String) constantsMap.get("usersLocationPath");
+        
+        // Validation of CSV paths happens in SPPExperimentConstants constructor
+        
+        String osmFilePath = (String) constantsMap.get("osmFilePath");  // Optional
+        String graphHopperFolder = (String) constantsMap.get("graphHopperFolder");  // Optional
+        
+        // Load events if present
+        Map<String, SPPExperimentConstants.EventConfig> events = new HashMap<>();
+        if (constantsMap.containsKey("events")) {
+            Map<String, Object> eventsMap = (Map<String, Object>) constantsMap.get("events");
+            for (Map.Entry<String, Object> entry : eventsMap.entrySet()) {
+                String eventName = entry.getKey();
+                Map<String, Object> eventData = (Map<String, Object>) entry.getValue();
+                
+                String eventType = (String) eventData.get("type");
+                double timestamp = ((Number) eventData.get("timestamp")).doubleValue();
+                Map<String, Object> parameters = (Map<String, Object>) eventData.get("parameters");
+                
+                events.put(eventName, new SPPExperimentConstants.EventConfig(eventType, timestamp, parameters));
+            }
+        }
+        
+        SPPExperimentConstants constants = new SPPExperimentConstants(
+            locationConfigFile, resourcesLocationPath, usersLocationPath, useDynamicLocations,
+            osmFilePath, graphHopperFolder, events, geographicArea);
+        
+        // Automatically set the USE_DYNAMIC_LOCATIONS flag based on the loaded constant
+        USE_DYNAMIC_LOCATIONS = useDynamicLocations;
+        System.out.println("Dynamic location generation: " + (useDynamicLocations ? "ENABLED" : "DISABLED"));
+        
+        return constants;
+    }
+
+    /**
+     * Parses a list of experiment configurations from YAML
+     */
+    @SuppressWarnings("unchecked")
+    private static List<SimulationConfig> parseExperimentConfigs(List<Map<String, Object>> yamlConfigs) {
+        List<SimulationConfig> configs = new ArrayList<>();
+        
+        for (Map<String, Object> configMap : yamlConfigs) {
                 int numberOfEdge = ((Number) configMap.get("numberOfEdge")).intValue();
                 
                 int placementLogic;
@@ -507,6 +660,12 @@ public class SPPExperiment {
                     placementProcessInterval = ((Number) configMap.get("placementProcessInterval")).doubleValue();
 //                    System.out.println("Using custom placement process interval: " + placementProcessInterval);
                 }
+                
+                // Read area name if present (optional metadata field)
+                String areaName = null;
+                if (configMap.containsKey("areaName")) {
+                    areaName = (String) configMap.get("areaName");
+                }
 
                 // Check for new format (numberOfApplications and appLoopLength)
                 if (configMap.containsKey("numberOfApplications") && configMap.containsKey("appLoopLength")) {
@@ -524,44 +683,18 @@ public class SPPExperiment {
                         locationSeed,
                         mobilityStrategySeed,
                         heuristicSeed,
-                        placementProcessInterval
+                        placementProcessInterval,
+                        areaName
                     ));
                     
 //                    System.out.println("Loaded configuration with " + numberOfApplications +
 //                                     " applications and loop length " + appLoopLength);
                 } 
-                // Legacy format with appLoopLengthPerType
-                else if (configMap.containsKey("appLoopLengthPerType")) {
-                    // Parse app loop lengths map (legacy format)
-                    Map<String, Integer> appLoopLengthPerType = new HashMap<>();
-                    Map<String, Object> loopLengthMap = (Map<String, Object>) configMap.get("appLoopLengthPerType");
-                    for (Map.Entry<String, Object> entry : loopLengthMap.entrySet()) {
-                        appLoopLengthPerType.put(entry.getKey(), ((Number) entry.getValue()).intValue());
-                    }
-                    
-                    configs.add(new SimulationConfig(
-                        numberOfEdge, 
-                        placementLogic, 
-                        usersPerType, 
-                        appLoopLengthPerType,
-                        experimentSeed,
-                        locationSeed,
-                        mobilityStrategySeed
-                    ));
-                    
-                    System.out.println("Loaded legacy configuration with app loop lengths per type");
-                }
                 else {
                     System.err.println("Configuration missing required fields, skipping");
                 }
             }
-
-            System.out.println("Loaded " + configs.size() + " configurations from " + SPPExperiment.CONFIG_FILE);
-        } catch (IOException e) {
-            System.err.println("Error loading configurations from " + SPPExperiment.CONFIG_FILE);
-            e.printStackTrace();
-        }
-
+        
         return configs;
     }
 
@@ -612,15 +745,42 @@ public class SPPExperiment {
         }
         
         // Load location configuration from JSON before creating any Location objects
-        String locationConfigFile = USE_DYNAMIC_LOCATIONS ? DYNAMIC_LOCATION_CONFIG_FILE : LOCATION_CONFIG_FILE;
+        String locationConfigFile;
+        if (USE_DYNAMIC_LOCATIONS) {
+            locationConfigFile = DYNAMIC_LOCATION_CONFIG_FILE;
+        } else {
+            locationConfigFile = experimentConstants.getLocationConfigFile();
+        }
+        
         System.out.println("Loading location configuration from " + locationConfigFile);
         boolean configLoaded = LocationConfigLoader.loadAndApplyConfig(locationConfigFile);
         if (!configLoaded) {
             System.err.println("Warning: Failed to load location configuration, using default values from Config.java");
         }
         
+        // Set geographic area from constants
+        if (!USE_DYNAMIC_LOCATIONS) {
+            Config.setGeographicArea(experimentConstants.getGeographicArea());
+            System.out.println("Set geographic area to: " + experimentConstants.getGeographicArea());
+        }
+        
         // Make sure Location class is updated with the latest Config values
         Location.refreshConfigValues();
+        
+        // Verify that required points of interest are loaded
+        System.out.println("Verifying points of interest after config load:");
+        Location hospital = Location.getPointOfInterest("HOSPITAL1");
+        Location operaHouse = Location.getPointOfInterest("OPERA_HOUSE");
+        System.out.println("  HOSPITAL1: " + (hospital != null ? hospital.toString() : "NOT FOUND"));
+        System.out.println("  OPERA_HOUSE: " + (operaHouse != null ? operaHouse.toString() : "NOT FOUND"));
+        
+        // If any required POI is missing, provide helpful error message
+        if (hospital == null || operaHouse == null) {
+            System.out.println("ERROR: Required points of interest not found in location configuration!");
+            System.out.println("Location config file: " + locationConfigFile);
+            System.out.println("Make sure the JSON file contains 'pointsOfInterest' with 'HOSPITAL1' and 'OPERA_HOUSE'");
+            throw new RuntimeException("Missing required points of interest in location configuration");
+        }
 
         // Get the experiment seed from configuration
         int experimentSeed = simulationConfig.getExperimentSeed();
@@ -740,9 +900,16 @@ public class SPPExperiment {
                 System.out.println("Initializing location data from CSV files...");
                 microservicesController.enableMobility();
                 
-                // Use dynamic paths if enabled
-                String resourcesPath = USE_DYNAMIC_LOCATIONS ? DYNAMIC_RESOURCES_LOCATION_PATH : RESOURCES_LOCATION_PATH;
-                String usersPath = USE_DYNAMIC_LOCATIONS ? DYNAMIC_USERS_LOCATION_PATH : USERS_LOCATION_PATH;
+                // Use dynamic paths if enabled, otherwise use experiment constants
+                String resourcesPath;
+                String usersPath;
+                if (USE_DYNAMIC_LOCATIONS) {
+                    resourcesPath = DYNAMIC_RESOURCES_LOCATION_PATH;
+                    usersPath = DYNAMIC_USERS_LOCATION_PATH;
+                } else {
+                    resourcesPath = experimentConstants.getResourcesLocationPath();
+                    usersPath = experimentConstants.getUsersLocationPath();
+                }
                 
                 microservicesController.initializeLocationData(
                     resourcesPath,
@@ -782,10 +949,16 @@ public class SPPExperiment {
             Log.printLine("Simon app START!");
             Log.printLine(String.format("Placement Logic: %d", placementLogicType));
 
-            // Schedule the opera accident event
-            double operaExplosionTime = 3600.0;
-            CloudSim.send(microservicesController.getId(), microservicesController.getId(), operaExplosionTime, 
-                          FogEvents.OPERA_ACCIDENT_EVENT, null);
+            // Schedule events from experiment constants
+            SPPExperimentConstants.EventConfig operaAccident = experimentConstants.getEvent("OPERA_ACCIDENT");
+            if (operaAccident != null) {
+                double operaExplosionTime = operaAccident.getTimestamp();
+                System.out.println("Scheduling OPERA_ACCIDENT event at time: " + operaExplosionTime);
+                CloudSim.send(microservicesController.getId(), microservicesController.getId(), operaExplosionTime, 
+                              FogEvents.OPERA_ACCIDENT_EVENT, null);
+            } else {
+                System.out.println("No OPERA_ACCIDENT event configured in constants");
+            }
 
             CloudSim.startSimulation();
 //            CloudSim.stopSimulation();

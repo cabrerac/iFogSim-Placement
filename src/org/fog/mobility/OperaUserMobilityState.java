@@ -45,6 +45,15 @@ public class OperaUserMobilityState extends DeviceMobilityState {
 
     private void adjustSpeedForTimedArrival(Location initialLocation) {
         Location operaHouse = Location.getPointOfInterest("OPERA_HOUSE");
+        
+        if (operaHouse == null) {
+            throw new RuntimeException(
+                "OPERA_HOUSE point of interest not found in location configuration. " +
+                "Make sure the location config JSON file contains a 'pointsOfInterest' section with 'OPERA_HOUSE' defined. " +
+                "Current location config should be loaded before creating OperaUserMobilityState objects."
+            );
+        }
+        
         double distanceToOpera = initialLocation.calculateDistance(operaHouse) * Consts.KM_TO_METERS;
         double estimatedTravelTime = distanceToOpera / speed;
         double currentTime = CloudSim.clock();
@@ -87,6 +96,9 @@ public class OperaUserMobilityState extends DeviceMobilityState {
 
         if (status == OperaUserStatus.TRAVELING_TO_OPERA) {
             Location operaHouse = Location.getPointOfInterest("OPERA_HOUSE");
+            if (operaHouse == null) {
+                throw new RuntimeException("OPERA_HOUSE point of interest not found in location configuration");
+            }
             // Make them stay at the opera for a fixed time (1 hour)
             this.currentAttractor = new Attractor(
                     operaHouse,
@@ -99,6 +111,9 @@ public class OperaUserMobilityState extends DeviceMobilityState {
             // Get carried out to a random location 100-300m away from the opera house
             double randomDistance = 100 + random.nextDouble() * 200;  // 100-300m
             Location operaHouse = Location.getPointOfInterest("OPERA_HOUSE");
+            if (operaHouse == null) {
+                throw new RuntimeException("OPERA_HOUSE point of interest not found in location configuration");
+            }
             Location evacLocation = Location.getRandomLocationWithinRadius(
                     operaHouse.getLatitude(),
                     operaHouse.getLongitude(),

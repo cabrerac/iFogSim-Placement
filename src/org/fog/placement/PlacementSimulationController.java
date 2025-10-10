@@ -729,9 +729,11 @@ public class PlacementSimulationController extends SimEntity {
         }
 
         // Keep track of user resources, then 
-        // schedule first periodic PR generation
+        // schedule first periodic PR generation (only if we have applications)
         initializeUserResources();
-        send(getId(), prGenerationInterval, FogEvents.GENERATE_PERIODIC_PR);
+        if (!applications.isEmpty() && !userDevices.isEmpty()) {
+            send(getId(), prGenerationInterval, FogEvents.GENERATE_PERIODIC_PR);
+        }
 
         // Placement Decisions will be made dynamically, but only by the Cloud!
         // Hence no need for an initialisation
@@ -1390,17 +1392,23 @@ public class PlacementSimulationController extends SimEntity {
         String userType = userDevice.getDeviceType();
         double delay;
 
-        try {
-            // Try to use the user-type specific lambda value
-            if (poissonDistribution.hasLambdaForUserType(userType)) {
-                delay = poissonDistribution.getNextValue(userType);
-            } else {
-                throw new NullPointerException("Invalid user type");
+        // Check if Poisson distribution is initialized
+        if (poissonDistribution == null) {
+            // Fall back to using the default PR generation interval
+            delay = prGenerationInterval;
+        } else {
+            try {
+                // Try to use the user-type specific lambda value
+                if (poissonDistribution.hasLambdaForUserType(userType)) {
+                    delay = poissonDistribution.getNextValue(userType);
+                } else {
+                    throw new NullPointerException("Invalid user type");
+                }
+            } catch (NullPointerException e) {
+                // Handle case where user type is not valid
+                System.err.println("Warning: Could not get time interval for user type: " + userType);
+                delay = poissonDistribution.getNextValue(); // Use default
             }
-        } catch (NullPointerException e) {
-            // Handle case where user type is not valid
-            System.err.println("Warning: Could not get time interval for user type: " + userType);
-            delay = poissonDistribution.getNextValue(); // Use default
         }
 
         // Schedule the PR generation with the calculated delay
