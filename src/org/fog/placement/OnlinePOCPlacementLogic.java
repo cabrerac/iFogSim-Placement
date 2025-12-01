@@ -37,6 +37,11 @@ public class OnlinePOCPlacementLogic implements MicroservicePlacementLogic {
         setFONId(fonID);
     }
 
+    @Override
+    public String getName() {
+        return "OnlinePOC";
+    }
+
     public void setFONId(int id) {
         fonID = id;
     }

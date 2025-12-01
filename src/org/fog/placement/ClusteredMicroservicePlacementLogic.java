@@ -41,6 +41,11 @@ public class ClusteredMicroservicePlacementLogic implements MicroservicePlacemen
         setFONId(fonID);
     }
 
+    @Override
+    public String getName() {
+        return "Clustered";
+    }
+
     public void setFONId(int id) {
         fonID = id;
     }

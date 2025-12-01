@@ -56,6 +56,8 @@ public class LocationConfigLoader {
             // Apply points of interest
             if (config.containsKey("pointsOfInterest")) {
                 applyPointsOfInterest((JSONObject) config.get("pointsOfInterest"));
+            } else {
+                System.err.println("WARNING: Config file does not contain 'pointsOfInterest' section!");
             }
             
             // Infer and set geographic area
@@ -220,6 +222,7 @@ public class LocationConfigLoader {
         
         // Update all points of interest at once
         Config.setAllPointsOfInterest(points);
+        System.out.println("Applied " + points.size() + " points of interest to Config");
     }
     
     /**

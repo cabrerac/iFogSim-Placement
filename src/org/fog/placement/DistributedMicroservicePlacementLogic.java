@@ -42,6 +42,11 @@ public class DistributedMicroservicePlacementLogic implements MicroservicePlacem
         setFONId(fonID);
     }
 
+    @Override
+    public String getName() {
+        return "Distributed";
+    }
+
     public void setFONId(int id) {
         fonID = id;
     }

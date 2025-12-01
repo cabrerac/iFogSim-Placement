@@ -1,0 +1,54 @@
+# Example SPPExperiment Configuration File for DUBLIN
+# This demonstrates how easy it is to switch to a different city
+# by just changing the constants section!
+
+# ============================================================================
+# CONSTANTS SECTION - Dublin Configuration
+# ============================================================================
+constants:
+  # Geographic area name (used for GraphHopper OSM selection)
+  geographicArea: "DUBLIN"
+  
+  # Location configuration file (contains boundary polygon and points of interest for Dublin)
+  locationConfigFile: "./dataset/location_config_dublin.json"
+  
+  # CSV data file paths for Dublin locations
+  # NOTE: You would need to generate or provide these files for Dublin
+  resourcesLocationPath: "./dataset/edgeResources-dublin.csv"
+  usersLocationPath: "./dataset/usersLocation-dublin.csv"
+  
+  # GraphHopper/OSM configuration for Dublin
+  osmFilePath: "/home/dawn/repos/iFogSim-placement/dublin.osm.pbf"
+  graphHopperFolder: "/home/dawn/repos/iFogSim-placement/output/graphhopper_dublin"
+  
+  # Event configurations (opera house coordinates would be different for Dublin)
+  events:
+    OPERA_ACCIDENT:
+      type: "OPERA_ACCIDENT"
+      timestamp: 3600.0
+      parameters: null
+
+# ============================================================================
+# EXPERIMENTS SECTION - Same experiment configurations work for any city!
+# ============================================================================
+experiments:
+  - numberOfEdge: 50
+    placementLogic: "ACO"
+    numberOfApplications: 500
+    appLoopLength: 1
+    placementProcessInterval: 4.0
+    usersPerType:
+      genericUser: 50
+      operaUser: 30
+      ambulanceUser: 10
+    intervalValues:
+      genericUser: 300
+      ambulanceUser: 180
+      operaUser: 600
+      immobileUser: 900
+    randomSeeds:
+      experimentSeed: 33
+      locationSeed: 42
+      mobilityStrategySeed: 123
+      heuristicSeed: 456
+

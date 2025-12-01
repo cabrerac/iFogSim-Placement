@@ -38,6 +38,11 @@ public class SPPMicroservicePlacementLogic implements MicroservicePlacementLogic
         setFONId(fonID);
     }
 
+    @Override
+    public String getName() {
+        return "SPP";
+    }
+
     public void setFONId(int id) {
         fonID = id;
     }
