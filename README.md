@@ -15,6 +15,40 @@ iFogSim2 currently encompasses several new usecases such as:
 
 # How to run iFogSim2 ?
 
+## Getting Started
+
+### Prerequisites
+
+1. **JDK 11**: Ensure you have JDK 11 installed on your machine. You can verify your Java version by running:
+   ```bash
+   java -version
+   ```
+   If you don't have JDK 11, download it from [Oracle](https://www.oracle.com/java/technologies/javase/jdk11-archive-downloads.html) or use a package manager like Homebrew (macOS) or apt (Linux).
+
+### Installation
+
+2. **Install Dependencies**: Use the Maven wrapper to install all required packages:
+   - **On macOS/Linux**:
+     ```bash
+     ./mvnw clean install
+     ```
+   - **On Windows**:
+     ```bash
+     mvnw.cmd clean install
+     ```
+
+### Running the Simulation
+
+3. **Run the Main Simulation**: Execute the simulation using the Maven wrapper:
+   ```bash
+   ./mvnw exec:java 2>&1 | tee output/SPPExperiment.txt
+   ```
+   
+   **Note**: The main class is configured in `pom.xml` to be `org.fog.test.perfeval.SPPExperiment`. If you want to run a different file, you can specify it in the command:
+   ```bash
+   ./mvnw exec:java -Dexec.mainClass="org.fog.test.perfeval.OnlinePOC" 2>&1 | tee output/OnlinePOC.txt
+   ```
+
 ## Quick Start
 * Eclipse IDE:
   * Create a Java project
