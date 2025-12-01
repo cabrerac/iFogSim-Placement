@@ -1,0 +1,207 @@
+# ============================================================================
+# CONSTANTS SECTION - These apply to all experiments
+# ============================================================================
+constants:
+  # Geographic area name (used for GraphHopper OSM selection)
+  geographicArea: "MELBOURNE"
+  
+  # Location configuration file (contains boundary polygon and points of interest)
+  locationConfigFile: "./dataset/location_config_melbourne.json"
+  
+  # Dynamic location generation flag
+  # If true: locations are generated randomly within the boundary defined in locationConfigFile
+  # If false: locations are loaded from the CSV files below (which MUST exist)
+  useDynamicLocations: false
+  
+  # CSV data file paths for locations (REQUIRED if useDynamicLocations is false)
+  resourcesLocationPath: "./dataset/edgeResources-melbCBD_Experiments.csv"
+  usersLocationPath: "./dataset/usersLocation-melbCBD_Experiments.csv"
+  
+  # GraphHopper/OSM configuration for realistic routing
+  osmFilePath: "./melbourne.osm.pbf"
+  graphHopperFolder: "./output/graphhopper_melbourne"
+  
+  # Event configurations
+  events:
+    OPERA_ACCIDENT:
+      type: "OPERA_ACCIDENT"
+      timestamp: 3600.0  # Occurs at 3600 seconds (1 hour) into simulation
+      parameters: null
+
+# ============================================================================
+# YAML ANCHORS - Define reusable configuration templates
+# ============================================================================
+# These are templates that can be referenced below to reduce duplication.
+# Researchers should modify these templates to vary experimental parameters.
+
+# Standard user distribution
+x-standard-users: &standard-users
+  genericUser: 100
+  operaUser: 80
+  ambulanceUser: 20
+
+# Standard interval values (in seconds)
+x-standard-intervals: &standard-intervals
+  genericUser: 300
+  ambulanceUser: 180
+  operaUser: 600
+  immobileUser: 900
+
+# Standard random seeds
+x-standard-seeds: &standard-seeds
+  experimentSeed: 33
+  locationSeed: 42
+  mobilityStrategySeed: 123
+  heuristicSeed: 456
+
+# ============================================================================
+# EXPERIMENTS SECTION - Individual experiment configurations
+# ============================================================================
+experiments:
+  # NOTE: User types include genericUser, ambulanceUser, operaUser, and immobileUser.
+
+  # ============================================================
+  # Configuration set: 300 edges, appLoopLength = 1
+  # ============================================================
+  - numberOfEdge: 100
+    placementLogic: "ACO"
+    numberOfApplications: 1300
+    appLoopLength: 1
+    placementProcessInterval: 4.0
+    usersPerType: *standard-users
+    intervalValues: *standard-intervals
+    randomSeeds: *standard-seeds
+    areaName: "melbourne"
+
+  - numberOfEdge: 100
+    placementLogic: "BEST_FIT"
+    numberOfApplications: 1300
+    appLoopLength: 1
+    placementProcessInterval: 4.0
+    usersPerType: *standard-users
+    intervalValues: *standard-intervals
+    randomSeeds: *standard-seeds
+    areaName: "melbourne"
+
+  - numberOfEdge: 100
+    placementLogic: "CLOSEST_FIT"
+    numberOfApplications: 1300
+    appLoopLength: 1
+    placementProcessInterval: 4.0
+    usersPerType: *standard-users
+    intervalValues: *standard-intervals
+    randomSeeds: *standard-seeds
+    areaName: "melbourne"
+
+  - numberOfEdge: 100
+    placementLogic: "ILP"
+    numberOfApplications: 1300
+    appLoopLength: 1
+    placementProcessInterval: 4.0
+    usersPerType: *standard-users
+    intervalValues: *standard-intervals
+    randomSeeds: *standard-seeds
+    areaName: "melbourne"
+
+  - numberOfEdge: 100
+    placementLogic: "MAX_FIT"
+    numberOfApplications: 1300
+    appLoopLength: 1
+    placementProcessInterval: 4.0
+    usersPerType: *standard-users
+    intervalValues: *standard-intervals
+    randomSeeds: *standard-seeds
+    areaName: "melbourne"
+
+  - numberOfEdge: 100
+    placementLogic: "MULTI_OPT"
+    numberOfApplications: 1300
+    appLoopLength: 1
+    placementProcessInterval: 4.0
+    usersPerType: *standard-users
+    intervalValues: *standard-intervals
+    randomSeeds: *standard-seeds
+    areaName: "melbourne"
+
+  - numberOfEdge: 100
+    placementLogic: "SIMULATED_ANNEALING"
+    numberOfApplications: 1300
+    appLoopLength: 1
+    placementProcessInterval: 4.0
+    usersPerType: *standard-users
+    intervalValues: *standard-intervals
+    randomSeeds: *standard-seeds
+    areaName: "melbourne"
+
+  # ============================================================
+  # Configuration set: 300 edges, appLoopLength = 3
+  # ============================================================
+  - numberOfEdge: 100
+    placementLogic: "ACO"
+    numberOfApplications: 1300
+    appLoopLength: 3
+    placementProcessInterval: 4.0
+    usersPerType: *standard-users
+    intervalValues: *standard-intervals
+    randomSeeds: *standard-seeds
+    areaName: "melbourne"
+
+  - numberOfEdge: 100
+    placementLogic: "BEST_FIT"
+    numberOfApplications: 1300
+    appLoopLength: 3
+    placementProcessInterval: 4.0
+    usersPerType: *standard-users
+    intervalValues: *standard-intervals
+    randomSeeds: *standard-seeds
+    areaName: "melbourne"
+
+  - numberOfEdge: 100
+    placementLogic: "CLOSEST_FIT"
+    numberOfApplications: 1300
+    appLoopLength: 3
+    placementProcessInterval: 4.0
+    usersPerType: *standard-users
+    intervalValues: *standard-intervals
+    randomSeeds: *standard-seeds
+    areaName: "melbourne"
+
+  - numberOfEdge: 100
+    placementLogic: "ILP"
+    numberOfApplications: 1300
+    appLoopLength: 3
+    placementProcessInterval: 4.0
+    usersPerType: *standard-users
+    intervalValues: *standard-intervals
+    randomSeeds: *standard-seeds
+    areaName: "melbourne"
+
+  - numberOfEdge: 100
+    placementLogic: "MAX_FIT"
+    numberOfApplications: 1300
+    appLoopLength: 3
+    placementProcessInterval: 4.0
+    usersPerType: *standard-users
+    intervalValues: *standard-intervals
+    randomSeeds: *standard-seeds
+    areaName: "melbourne"
+
+  - numberOfEdge: 100
+    placementLogic: "MULTI_OPT"
+    numberOfApplications: 1300
+    appLoopLength: 3
+    placementProcessInterval: 4.0
+    usersPerType: *standard-users
+    intervalValues: *standard-intervals
+    randomSeeds: *standard-seeds
+    areaName: "melbourne"
+
+  - numberOfEdge: 100
+    placementLogic: "SIMULATED_ANNEALING"
+    numberOfApplications: 1300
+    appLoopLength: 3
+    placementProcessInterval: 4.0
+    usersPerType: *standard-users
+    intervalValues: *standard-intervals
+    randomSeeds: *standard-seeds
+    areaName: "melbourne"

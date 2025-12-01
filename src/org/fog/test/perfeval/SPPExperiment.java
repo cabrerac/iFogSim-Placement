@@ -53,14 +53,15 @@ import java.util.*;
  * DYNAMIC_CLUSTERING -> true (for clustered) and false (for not clustered) * (also compatible with static clustering)
  */
 public class SPPExperiment {
-//    private static final String outputFile = "./output/PerfEval/ACO_100_X_X_FINAL.csv";
-//    private static final String CONFIG_FILE = "./dataset/PerformanceEvalConfigsUsers.yaml";
-    private static final String outputFile = "./output/MiH_4_0_Melbourne.csv";
-    private static final String CONFIG_FILE = "./dataset/SPPExperimentConfigs.yaml";
+    private static final String outputFile = "./output/MiH_Melbourne.csv";
+    private static final String CONFIG_FILE = "./dataset/SPPExperimentShortConfigs.yaml";
 
     static List<FogDevice> fogDevices = new ArrayList<FogDevice>();
     static List<Sensor> sensors = new ArrayList<Sensor>();
     static List<Actuator> actuators = new ArrayList<Actuator>();
+    
+    // Store controller reference for cleanup
+    static PlacementSimulationController currentController = null;
 
     // Constants for data configurations
     static double SENSOR_TRANSMISSION_TIME = 10;
@@ -163,11 +164,27 @@ public class SPPExperiment {
             e.printStackTrace();
         }
         
-        // Clear power metrics at START of experiment
-        MetricUtils.clearPowerMetrics();
-        
         for (int simIndex = 0; simIndex < configs.size(); simIndex++) {
             SimulationConfig config = configs.get(simIndex);
+            
+            // Force garbage collection before starting to ensure clean state
+            System.out.println("\n========= Starting Simulation " + simIndex + " =========");
+            printMemoryUsage("Before GC");
+            
+            // Aggressive GC to clean up previous simulation
+            System.gc();
+            System.runFinalization();
+            System.gc(); // Call GC twice for more thorough cleanup
+            
+            try {
+                Thread.sleep(3000); // Allow GC to complete (3 seconds)
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            printMemoryUsage("After forced GC");
+            
+            // Clear power metrics BEFORE each simulation
+            MetricUtils.clearPowerMetrics();
             
             // Create metrics object for this simulation
             PerformanceMetrics metrics = new PerformanceMetrics(config);
@@ -208,7 +225,11 @@ public class SPPExperiment {
             // Optional: Delete temporary files
             deleteTempFiles(simIndex);
             
+            // Clean up simulation resources to prevent memory leaks
+            cleanupAfterSimulation();
+            
             System.out.println("Simulation completed in " + metrics.getExecutionTimeMs() + " ms");
+            System.out.println("Memory cleanup performed.");
         }
         
         // Print final entity ID information
@@ -788,6 +809,7 @@ public class SPPExperiment {
              * Central controller for performing preprocessing functions
              */
             PlacementSimulationController microservicesController;
+            currentController = null; // Clear previous controller reference
             
             // Get interval values from the configuration
             Map<String, Integer> intervalValues = simulationConfig.getIntervalValues();
@@ -809,6 +831,9 @@ public class SPPExperiment {
                     simulationConfig.getPlacementProcessInterval()
                 );
             } else {throw new NullPointerException("Need interval values in experiment config");}
+            
+            // Store controller reference for later cleanup
+            currentController = microservicesController;
             
             // Register device-sensor-actuator mappings
             microservicesController.registerDeviceMappings();
@@ -878,7 +903,9 @@ public class SPPExperiment {
             }
 
             CloudSim.startSimulation();
-//            CloudSim.stopSimulation();
+            // CloudSim.stopSimulation() is called automatically in CloudSim.startSimulation() 
+            // after the simulation completes via finishSimulation()
+            
             // TODO Possible mega cleanup/metric collection function
             SPPMonitor.getInstance().incrementSimulationRoundNumber();
             
@@ -1348,6 +1375,70 @@ public class SPPExperiment {
                 System.err.println("Could not delete temporary failed PRs file: " + e.getMessage());
             }
         }
+    }
+    
+    /**
+     * Comprehensive cleanup after each simulation to prevent memory leaks
+     */
+    private static void cleanupAfterSimulation() {
+        // Print memory usage before cleanup
+        printMemoryUsage("Before cleanup");
+        
+        // Clear controller references FIRST
+        if (currentController != null) {
+            try {
+                currentController.reset();
+                System.out.println("Controller reset completed");
+            } catch (Exception e) {
+                System.err.println("Error resetting controller: " + e.getMessage());
+            }
+            currentController = null; // Null out the reference
+        }
+        
+        // Clear CloudSim event queues
+        try {
+            CloudSim.clearQueues();
+        } catch (Exception e) {
+            // Ignore if CloudSim is not in proper state
+        }
+        
+        // Clear SPPMonitor static data
+        SPPMonitor.getInstance().clearCurrentSimulationData();
+        
+        // Clear power metrics
+        MetricUtils.clearPowerMetrics();
+        
+        // Clear static lists (though they're cleared at start of run(), doing it here helps GC)
+        // Using explicit null assignments after clear to help GC
+        fogDevices.clear();
+        sensors.clear();
+        actuators.clear();
+        
+        // Note: We don't force GC here as we do it before the next simulation starts
+        // This gives the JVM more flexibility in GC scheduling
+        
+        printMemoryUsage("After cleanup");
+        System.out.println("Simulation cleanup completed.\n");
+    }
+    
+    /**
+     * Prints current memory usage statistics
+     */
+    private static void printMemoryUsage(String label) {
+        Runtime runtime = Runtime.getRuntime();
+        long totalMemory = runtime.totalMemory();
+        long freeMemory = runtime.freeMemory();
+        long usedMemory = totalMemory - freeMemory;
+        long maxMemory = runtime.maxMemory();
+        
+        System.out.println(String.format(
+            "Memory [%s]: Used=%dMB, Free=%dMB, Total=%dMB, Max=%dMB",
+            label,
+            usedMemory / (1024 * 1024),
+            freeMemory / (1024 * 1024),
+            totalMemory / (1024 * 1024),
+            maxMemory / (1024 * 1024)
+        ));
     }
 }
 

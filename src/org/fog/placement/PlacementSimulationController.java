@@ -83,14 +83,28 @@ public class PlacementSimulationController extends SimEntity {
         // Clear placement requests
         placementRequestDelayMap.clear();
         
-        // Clear mobility states
+        // CRITICAL: Clean up GraphHopper instances in mobility states before clearing
+        for (DeviceMobilityState state : deviceMobilityStates.values()) {
+            if (state != null) {
+                PathingStrategy strategy = state.getStrategy();
+                if (strategy instanceof GraphHopperPathingStrategy) {
+                    ((GraphHopperPathingStrategy) strategy).reset();
+                    System.out.println("Cleaned up GraphHopper instance from mobility state");
+                }
+            }
+        }
         deviceMobilityStates.clear();
         
         // Reset mobility strategy
         mobilityStrategy = new NoMobilityStrategy();
         
+        // Clear applications map
+        applications.clear();
+        
         // Location data initialization flag
         locationDataInitialized = false;
+        
+        System.out.println("PlacementSimulationController reset completed");
     }
 
     /**
