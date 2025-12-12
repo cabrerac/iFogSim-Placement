@@ -25,8 +25,8 @@ iFogSim-Placement extends the newest version of [iFogSim](https://github.com/Clo
     ```
 
 3. **Install Dependencies** (in the repository's root directory)
-This repository uses Maven for package management.
-Run the following to use the Maven wrapper (which installs all packages):
+This repository uses Maven for package management. The repository includes a Maven wraper you can use to install all project dependencies using the following commands:
+
    - **On macOS/Linux**:
      ```bash
      chmod +x ./mvnw
@@ -34,7 +34,7 @@ Run the following to use the Maven wrapper (which installs all packages):
      ```
    - **On Windows**:
      ```bash
-     mvnw.cmd clean install
+     ./mvnw.cmd clean install
      ```
 
 ### Running the Simulation
