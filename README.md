@@ -19,14 +19,14 @@ iFogSim-Placement extends the newest version of [iFogSim](https://github.com/Clo
 
 ### Installation
 
-2. **Clone this repository to desired folder**
+2. **Clone this repository to desired folder. If you are in the anonymised GitHub repository, please download the repository from [here](https://anonymous.4open.science/api/repo/iFogSim-Placement-C94E/zip). You will need to unzip the downloaded file to continue with the installation below.**
     ```bash
     git clone https://github.com/DawnSpider96/iFogSim-Placement
     ```
 
 3. **Install Dependencies** (in the repository's root directory)
-This repository uses Maven for package management.
-Run the following to use the Maven wrapper (which installs all packages):
+This repository uses Maven for package management. The repository includes a Maven wraper you can use to install all project dependencies using the following commands:
+
    - **On macOS/Linux**:
      ```bash
      chmod +x ./mvnw
@@ -34,7 +34,7 @@ Run the following to use the Maven wrapper (which installs all packages):
      ```
    - **On Windows**:
      ```bash
-     mvnw.cmd clean install
+     ./mvnw.cmd clean install
      ```
 
 ### Running the Simulation
