@@ -53,8 +53,10 @@ import java.util.*;
  * DYNAMIC_CLUSTERING -> true (for clustered) and false (for not clustered) * (also compatible with static clustering)
  */
 public class SPPExperiment {
-    private static final String outputFile = "./output/MiH_Melbourne.csv";
+    private static final String DEFAULT_OUTPUT_FILE = "./output/MiH_Melbourne.csv";
     private static final String CONFIG_FILE = "./dataset/SPPExperimentShortConfigs.yaml";
+    
+    private static String outputFile = DEFAULT_OUTPUT_FILE;
 
     static List<FogDevice> fogDevices = new ArrayList<FogDevice>();
     static List<Sensor> sensors = new ArrayList<Sensor>();
@@ -232,11 +234,21 @@ public class SPPExperiment {
             System.out.println("Memory cleanup performed.");
         }
         
-        // Print final entity ID information
         System.out.println("\n========= FINAL SUMMARY =========");
-        System.out.println("Final ENTITY_ID: " + FogUtils.getCurrentEntityId());
-        System.out.println("Final TUPLE_ID: " + FogUtils.getCurrentTupleId());
-        System.out.println("Final ACTUAL_TUPLE_ID: " + FogUtils.getCurrentActualTupleId());
+        System.out.println("All " + configs.size() + " simulations completed successfully.");
+        System.out.println("");
+        System.out.println("RESULTS LOCATION:");
+        System.out.println("  CSV Metrics File: " + new java.io.File(outputFile).getAbsolutePath());
+        System.out.println("");
+        System.out.println("The CSV file contains per-simulation metrics including:");
+        System.out.println("  - Resource utilization (avg/stddev)");
+        System.out.println("  - Latency (avg/stddev)");
+        System.out.println("  - Failure ratios");
+        System.out.println("  - Energy consumption");
+        System.out.println("  - Execution time");
+        System.out.println("");
+        System.out.println("TIP: To save the console log, run with:");
+        System.out.println("  ./mvnw exec:java 2>&1 | tee output/SPPExperiment.txt");
         System.out.println("=================================\n");
     }
 
@@ -520,13 +532,17 @@ public class SPPExperiment {
             }
         }
         
+        String outputFilePath = (String) constantsMap.get("outputFilePath");
+        
         SPPExperimentConstants constants = new SPPExperimentConstants(
             locationConfigFile, resourcesLocationPath, usersLocationPath, useDynamicLocations,
-            osmFilePath, graphHopperFolder, events, geographicArea);
+            osmFilePath, graphHopperFolder, events, geographicArea, outputFilePath);
         
-        // Automatically set the USE_DYNAMIC_LOCATIONS flag based on the loaded constant
         USE_DYNAMIC_LOCATIONS = useDynamicLocations;
         System.out.println("Dynamic location generation: " + (useDynamicLocations ? "ENABLED" : "DISABLED"));
+        
+        outputFile = constants.getOutputFilePath();
+        System.out.println("Output file configured: " + outputFile);
         
         return constants;
     }

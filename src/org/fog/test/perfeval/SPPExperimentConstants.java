@@ -11,12 +11,12 @@ import java.util.Map;
  * @author Dawn
  */
 public class SPPExperimentConstants {
-    // Default values for optional fields
     private static final String DEFAULT_OSM_FILE = "./melbourne.osm.pbf";
     private static final String DEFAULT_GRAPH_FOLDER = "./output/graphhopper_melbourne";
+    private static final String DEFAULT_OUTPUT_FILE = "./output/MiH_Melbourne.csv";
     
-    // Location configuration
     private final String locationConfigFile;
+    private final String outputFilePath;
     private final String resourcesLocationPath;
     private final String usersLocationPath;
     
@@ -60,9 +60,6 @@ public class SPPExperimentConstants {
         }
     }
     
-    /**
-     * Constructor with all parameters (all required)
-     */
     public SPPExperimentConstants(String locationConfigFile, 
                                String resourcesLocationPath,
                                String usersLocationPath,
@@ -70,7 +67,8 @@ public class SPPExperimentConstants {
                                String osmFilePath,
                                String graphHopperFolder,
                                Map<String, EventConfig> events,
-                               String geographicArea) {
+                               String geographicArea,
+                               String outputFilePath) {
         // Validate required fields
         if (locationConfigFile == null || geographicArea == null) {
             throw new IllegalArgumentException(
@@ -117,6 +115,7 @@ public class SPPExperimentConstants {
         this.graphHopperFolder = graphHopperFolder != null ? graphHopperFolder : DEFAULT_GRAPH_FOLDER;
         this.events = events != null ? events : new HashMap<>();
         this.geographicArea = geographicArea;
+        this.outputFilePath = outputFilePath != null ? outputFilePath : DEFAULT_OUTPUT_FILE;
         
         // Note: OSM file validation happens in SPPExperiment.validateOsmFileForMobileUsers()
         // after all configs are loaded, so we can check if mobile users are actually used
@@ -156,6 +155,10 @@ public class SPPExperimentConstants {
         return useDynamicLocations;
     }
     
+    public String getOutputFilePath() {
+        return outputFilePath;
+    }
+    
     /**
      * Gets a specific event configuration by name
      */
@@ -166,8 +169,8 @@ public class SPPExperimentConstants {
     @Override
     public String toString() {
         return String.format("ExperimentConstants{area=%s, locationConfig=%s, useDynamic=%s, resourcesCSV=%s, " +
-                           "usersCSV=%s, osmFile=%s, events=%d}",
+                           "usersCSV=%s, osmFile=%s, outputFile=%s, events=%d}",
                            geographicArea, locationConfigFile, useDynamicLocations, resourcesLocationPath, 
-                           usersLocationPath, osmFilePath, events.size());
+                           usersLocationPath, osmFilePath, outputFilePath, events.size());
     }
 }
